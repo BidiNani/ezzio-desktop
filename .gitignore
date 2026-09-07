@@ -1,0 +1,22 @@
+﻿# Dependances
+node_modules/
+
+# Build frontend
+dist/
+dist-ssr/
+
+# Build Rust/Tauri (le plus volumineux : installeurs NSIS/WiX, binaires)
+src-tauri/target/
+
+# Fichiers locaux/env
+.env
+.env.local
+*.local
+
+# Editeurs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

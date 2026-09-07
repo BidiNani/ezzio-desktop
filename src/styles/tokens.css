@@ -1,0 +1,117 @@
+/* Design tokens E-zzio - deux themes, jamais de couleur en dur ailleurs dans le code */
+
+:root,
+[data-theme="dark"] {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #14141e;
+  --bg-card: #1c1c2e;
+  --bg-card-hover: #252540;
+
+  --text-primary: #f0f0f5;
+  --text-secondary: #a0a0b8;
+  --text-muted: #606080;
+
+  --border-subtle: #2a2a42;
+  --border-accent: #3a3a5e;
+
+  --status-running: #4ade80;
+  --status-pending: #facc15;
+  --status-completed: #4ade80;
+  --status-error: #f87171;
+  --status-offline: #6b7280;
+  --status-critical: #f472b6;
+
+  --accent-blue: #60a5fa;
+  --accent-purple: #a78bfa;
+
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --shadow-elevated: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="light"] {
+  --bg-primary: #f7f7fb;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f0f0f7;
+
+  --text-primary: #16161f;
+  --text-secondary: #52526b;
+  --text-muted: #8a8aa0;
+
+  --border-subtle: #e2e2ee;
+  --border-accent: #c8c8dd;
+
+  --status-running: #16a34a;
+  --status-pending: #ca8a04;
+  --status-completed: #16a34a;
+  --status-error: #dc2626;
+  --status-offline: #6b7280;
+  --status-critical: #db2777;
+
+  --accent-blue: #2563eb;
+  --accent-purple: #7c3aed;
+
+  --shadow-card: 0 2px 12px rgba(20, 20, 40, 0.08);
+  --shadow-elevated: 0 8px 32px rgba(20, 20, 40, 0.14);
+}
+
+:root {
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Etats interactifs en vraies classes CSS - jamais de pseudo-selecteur
+   dans un objet de style inline React, ca ne s'applique pas. */
+.card-interactive {
+  transition: background-color 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+}
+.card-interactive:hover {
+  background: var(--bg-card-hover);
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  padding: 8px 20px;
+  background: var(--accent-blue);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.btn-primary:hover { opacity: 0.85; }
+.btn-primary:active { transform: scale(0.98); }
+
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes skeleton-sweep { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--border-accent); border-radius: 3px; }
