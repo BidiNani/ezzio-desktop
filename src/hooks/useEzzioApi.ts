@@ -6,6 +6,8 @@ import {
   SystemHealth,
   ProviderHealth,
   Risk,
+  ResearchResult,
+  MemoryItem,
 } from '../types';
 
 export const MOCK_MODE = false;
@@ -440,7 +442,7 @@ export function useEzzioApi() {
           body: JSON.stringify({
             text,
             speed: 'auto',
-            force_cloud: true,
+            force_cloud: false,
             mission_profile: 'STANDARD',
             model_target: 'auto',
             channel: 'desktop',
@@ -454,6 +456,101 @@ export function useEzzioApi() {
     [request]
   );
 
+  const searchResearch = useCallback(
+    async (query: string, mode: 'fast' | 'deep' | 'local' = 'fast'): Promise<ResearchResult | null> => {
+      const data = await request<{
+        task_id: string;
+        mode: string;
+        provider: string;
+        data: Record<string, unknown>;
+      }>('/api/v1/research/search', {
+        method: 'POST',
+        body: JSON.stringify({ query, mode }),
+      });
+
+      if (!data) return null;
+
+      return {
+        taskId: data.task_id,
+        mode: data.mode,
+        provider: data.provider,
+        data: data.data,
+      };
+    },
+    [request]
+  );
+
+  const getMemoryRecent = useCallback(
+    async (limit = 20): Promise<MemoryItem[]> => {
+      const data = await request<{ items: MemoryItem[] }>(`/memory/recent?limit=${limit}`);
+      return data?.items ?? [];
+    },
+    [request]
+  );
+
+  const searchMemory = useCallback(
+    async (query: string, limit = 10): Promise<MemoryItem[]> => {
+      const data = await request<{ results?: MemoryItem[]; items?: MemoryItem[] }>('/memory/search', {
+        method: 'POST',
+        body: JSON.stringify({ query, limit }),
+      });
+      return data?.results ?? data?.items ?? [];
+    },
+    [request]
+  );
+
+  const pauseMission = useCallback(
+    async (missionId: string) => {
+      return request<{ ok: boolean; mission_id: string; status: string }>(
+        `/master/missions/${missionId}/pause`,
+        { method: 'POST' }
+      );
+    },
+    [request]
+  );
+
+  const resumeMission = useCallback(
+    async (missionId: string) => {
+      return request<{ ok: boolean; mission_id: string; status: string }>(
+        `/master/missions/${missionId}/resume`,
+        { method: 'POST' }
+      );
+    },
+    [request]
+  );
+
+  const getGovernanceSettings = useCallback(async () => {
+    return request<{
+      ok: boolean;
+      settings: {
+        local_only: boolean;
+        cloud_fallback: boolean;
+        max_budget_cents: number;
+        profiles: Record<string, string>;
+      };
+      registered_models_count: number;
+      available_local_roles: string[];
+    }>('/master/governance/settings');
+  }, [request]);
+
+  const updateGovernanceSettings = useCallback(
+    async (payload: { local_only?: boolean; cloud_fallback?: boolean; max_budget_cents?: number }) => {
+      return request<{
+        ok: boolean;
+        settings: {
+          local_only: boolean;
+          cloud_fallback: boolean;
+          max_budget_cents: number;
+          profiles: Record<string, string>;
+        };
+      }>('/master/governance/settings', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+    [request]
+  );
+
   return {
     serverConfig,
     error,
@@ -462,11 +559,18 @@ export function useEzzioApi() {
     ping,
     getMissions,
     getMission,
+    pauseMission,
+    resumeMission,
     getApprovals,
     approveMission,
     rejectMission,
     getGoals,
     getHealth,
     sendChat,
+    searchResearch,
+    getMemoryRecent,
+    searchMemory,
+    getGovernanceSettings,
+    updateGovernanceSettings,
   };
 }
