@@ -1,13 +1,20 @@
-// NOTE IMPORTANTE : ces types et les noms de champs sont des HYPOTHESES
-// raisonnables, pas une verification du backend E-zzio reel.
-// Avant de brancher useEzzioApi sur le vrai serveur, inspecte
-// core/main.py / web_server.py pour confirmer les routes et le shape
-// exact des reponses JSON, et ajuste ce fichier en consequence.
-
 export type MissionStatus = 'running' | 'pending' | 'completed' | 'failed' | 'paused' | 'cancelled';
 export type ProviderStatus = 'online' | 'degraded' | 'offline';
 export type WorldModelFreshness = 'fresh' | 'aging' | 'stale';
 export type GoalStatus = 'on_track' | 'at_risk' | 'delayed' | 'completed';
+
+export type TabId =
+  | 'chat'
+  | 'missions'
+  | 'approvals'
+  | 'goals'
+  | 'projects'
+  | 'files'
+  | 'research'
+  | 'automations'
+  | 'memory'
+  | 'health'
+  | 'settings';
 
 export interface Subtask {
   id: string;
@@ -73,6 +80,8 @@ export interface SystemHealth {
   providers: ProviderHealth[];
   worldModelFreshness: WorldModelFreshness;
   risks: Risk[];
+  auditLedgerStatus?: string;
+  agentCount?: number;
 }
 
 export interface ServerConfig {
@@ -80,4 +89,31 @@ export interface ServerConfig {
   port: number;
   connected: boolean;
   lastPing?: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  text: string;
+  time: string;
+  model?: string;
+  provider?: string;
+  status?: 'sending' | 'success' | 'error';
+}
+
+export interface ResearchResult {
+  taskId: string;
+  mode: string;
+  provider: string;
+  data: Record<string, unknown>;
+}
+
+export interface MemoryItem {
+  id?: string;
+  content?: string;
+  text?: string;
+  role?: string;
+  timestamp?: string;
+  session_id?: string;
+  metadata?: Record<string, unknown>;
 }

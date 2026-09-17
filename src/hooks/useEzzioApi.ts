@@ -186,6 +186,8 @@ export function useEzzioApi() {
     [serverConfig.address, serverConfig.port]
   );
 
+  const failureCount = useRef(0);
+
   const request = useCallback(
     async <T,>(
       endpoint: string,
@@ -213,23 +215,18 @@ export function useEzzioApi() {
           throw new Error(detail);
         }
 
-        setServerConfig((prev) => ({
-          ...prev,
-          connected: true,
-        }));
+        failureCount.current = 0;
+        setServerConfig((prev) => (prev.connected ? prev : { ...prev, connected: true }));
         setError(null);
 
         return (await res.json()) as T;
       } catch (err) {
-        setServerConfig((prev) => ({
-          ...prev,
-          connected: false,
-        }));
-
-        setError(
-          err instanceof Error ? err.message : 'Erreur réseau'
-        );
-
+        failureCount.current += 1;
+        // On ne déclare offline qu'après 2 échecs consécutifs pour éviter le clignotement
+        if (failureCount.current >= 2) {
+          setServerConfig((prev) => (!prev.connected ? prev : { ...prev, connected: false }));
+          setError(err instanceof Error ? err.message : 'Erreur réseau');
+        }
         return null;
       }
     },
@@ -238,30 +235,26 @@ export function useEzzioApi() {
 
   const ping = useCallback(async () => {
     try {
-      const res = await fetch(`${getBaseUrl()}/`, {
+      const res = await fetch(`${getBaseUrl()}/health`, {
         method: 'GET',
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(4000),
       });
 
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
 
-      setServerConfig((prev) => ({
-        ...prev,
-        connected: true,
-      }));
+      failureCount.current = 0;
+      setServerConfig((prev) => (prev.connected ? prev : { ...prev, connected: true }));
       setError(null);
 
       return { status: 'ONLINE' };
     } catch (err) {
-      setServerConfig((prev) => ({
-        ...prev,
-        connected: false,
-      }));
-      setError(
-        err instanceof Error ? err.message : 'Backend indisponible'
-      );
+      failureCount.current += 1;
+      if (failureCount.current >= 2) {
+        setServerConfig((prev) => (!prev.connected ? prev : { ...prev, connected: false }));
+        setError(err instanceof Error ? err.message : 'Backend indisponible');
+      }
       return null;
     }
   }, [getBaseUrl]);
@@ -434,7 +427,7 @@ export function useEzzioApi() {
   }, [request]);
 
   const sendChat = useCallback(
-    async (text: string, sessionId: string) => {
+    async (text: string, sessionId: string, forceCloud = true) => {
       const result = await request<MasterChatResponse>(
         '/master/chat',
         {
@@ -442,7 +435,7 @@ export function useEzzioApi() {
           body: JSON.stringify({
             text,
             speed: 'auto',
-            force_cloud: false,
+            force_cloud: forceCloud,
             mission_profile: 'STANDARD',
             model_target: 'auto',
             channel: 'desktop',

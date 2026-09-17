@@ -261,13 +261,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
               <div style={{ fontSize: 12, padding: 8, background: 'var(--bg-card)', borderRadius: 4 }}>
-                <span style={{ color: 'var(--text-muted)' }}>Chat Général :</span> <strong>Ollama Local / Fast</strong>
+                <span style={{ color: 'var(--text-muted)' }}>Chat Général :</span> <strong>Gemini Flash 3.6 (Cloud Ultra-Fast)</strong>
               </div>
               <div style={{ fontSize: 12, padding: 8, background: 'var(--bg-card)', borderRadius: 4 }}>
-                <span style={{ color: 'var(--text-muted)' }}>Coding / Coder :</span> <strong>Ollama ➔ NVIDIA ➔ Gemini</strong>
+                <span style={{ color: 'var(--text-muted)' }}>Coding / Technique :</span> <strong>Gemini Flash 3.7 (Code-Tuned)</strong>
               </div>
               <div style={{ fontSize: 12, padding: 8, background: 'var(--bg-card)', borderRadius: 4 }}>
-                <span style={{ color: 'var(--text-muted)' }}>Stratégie / Raisonnement :</span> <strong>Gemini Flash 3.8</strong>
+                <span style={{ color: 'var(--text-muted)' }}>Stratégie / Raisonnement :</span> <strong>Gemini Flash 3.8 (High-Order)</strong>
               </div>
             </div>
           </div>
