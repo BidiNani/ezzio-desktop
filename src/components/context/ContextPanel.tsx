@@ -1,6 +1,6 @@
 import React from 'react';
 import { SystemHealth, ServerConfig } from '../../types';
-import { Cpu, ShieldCheck, Activity, X, Terminal, Server } from 'lucide-react';
+import { Cpu, ShieldCheck, Activity, X, Server } from 'lucide-react';
 import { StatusBadge } from '../ui/StatusBadge';
 
 interface ContextPanelProps {

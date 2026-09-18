@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { ModelSelector } from '../ui/ModelSelector';
 import { MessageList } from './MessageList';
 import { ChatComposer } from './ChatComposer';

@@ -4,7 +4,6 @@ import {
   ApprovalRequest,
   Goal,
   SystemHealth,
-  ProviderHealth,
   Risk,
   ResearchResult,
   MemoryItem,
