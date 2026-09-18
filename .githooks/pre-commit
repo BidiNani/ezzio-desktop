@@ -1,0 +1,17 @@
+#!/bin/sh
+# E-ZZIO Frontend — pre-commit hook
+# Lance lint + typecheck avant chaque commit
+
+set -e
+
+if [ -f "package.json" ]; then
+    if command -v npm >/dev/null 2>&1; then
+        echo "→ npm run lint (if present)..."
+        npm run lint --if-present || exit 1
+
+        echo "→ npm run typecheck (if present)..."
+        npm run typecheck --if-present || exit 1
+    fi
+fi
+
+echo "✅ Pre-commit OK"
