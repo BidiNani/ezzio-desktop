@@ -3,7 +3,6 @@
  * Retourne { online: boolean, lastCheck: Date | null, latency: number | null }.
  */
 import { useEffect, useState } from 'react';
-import { usePolling } from './usePolling';
 import { API_BASE } from './useApi';
 
 export interface BackendStatus {

@@ -1,5 +1,4 @@
-import { useCallback, useState } from 'react';
-import { usePolling } from './usePolling';
+import { useCallback, useEffect, useState } from 'react';
 import type { AccountProvider, ConnectedAccount } from '../types/accounts';
 
 const API_BASE = 'http://127.0.0.1:8001';
@@ -35,7 +34,11 @@ export function useAccounts() {
     }
   }, []);
 
-  usePolling(refresh, 60000, true);
+  useEffect(() => {
+    void refresh();
+    const id = window.setInterval(() => void refresh(), 60000);
+    return () => window.clearInterval(id);
+  }, [refresh]);
 
   const connect = useCallback(async (providerId: string): Promise<void> => {
     try {

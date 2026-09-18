@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { usePolling } from '../../hooks/usePolling';
+import { useState, useEffect, useCallback } from 'react';
+import { useVisibilityAwareInterval } from '../../hooks/useVisibilityAwareInterval';
 import { API_BASE } from '../../hooks/useApi';
 import { SkeletonCard, SkeletonList } from '../ui/Skeleton';
 import { RetryButton } from '../ui/RetryButton';
@@ -60,7 +60,11 @@ export function HealthScreen() {
     }
   }, []);
 
-  usePolling(load, 60000, true);
+  useEffect(() => {
+    void load();
+    const id = window.setInterval(() => { if (document.hidden) return; load(); }, 60000);
+    return () => window.clearInterval(id);
+  }, [load]);
 
   if (loading && !providers) {
     return (

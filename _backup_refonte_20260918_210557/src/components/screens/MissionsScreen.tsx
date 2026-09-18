@@ -1,5 +1,4 @@
-import { useState, useCallback } from 'react';
-import { usePolling } from '../../hooks/usePolling';
+import { useState, useEffect, useCallback } from 'react';
 import { API_BASE } from '../../hooks/useApi';
 import { SkeletonList } from '../ui/Skeleton';
 import { RetryButton } from '../ui/RetryButton';
@@ -63,7 +62,11 @@ export function MissionsScreen() {
     }
   }, []);
 
-  usePolling(load, 60000, true);
+  useEffect(() => {
+    void load();
+    const id = window.setInterval(() => { if (document.hidden) return; load(); }, 60000);
+    return () => window.clearInterval(id);
+  }, [load]);
 
   const decide = async (approvalId: string, decision: 'APPROVE' | 'REJECT') => {
     try {

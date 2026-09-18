@@ -1,0 +1,245 @@
+import { useState, useEffect, useRef } from 'react';
+
+import { API_BASE } from '../../hooks/useApi';
+
+type Provider = 'serpdive' | 'tavily' | 'duckduckgo' | 'google' | 'brave';
+
+interface SearchResult {
+  url: string;
+  title: string;
+  content?: string;
+  score?: number;
+  date?: string;
+  id?: string;
+}
+
+interface InnerData {
+  results: SearchResult[];
+  total?: number;
+  raw?: {
+    response_time?: number;
+    response_time_ms?: number;
+    request_id?: string;
+  };
+}
+
+interface ApiResponse {
+  ok: boolean;
+  data?: {
+    provider: string;
+    data: InnerData;
+  };
+  error?: string;
+}
+
+const PROVIDERS: { id: Provider; label: string; hint: string }[] = [
+  { id: 'brave', label: 'Brave', hint: '⭐ Le plus rapide (520ms) · gratuit' },
+  { id: 'tavily', label: 'Tavily', hint: 'API officielle · 1K/mois gratuit' },
+  { id: 'duckduckgo', label: 'DuckDuckGo', hint: 'Gratuit (scraping, 750ms)' },
+  { id: 'serpdive', label: 'SERPdive', hint: '⚠️ Indisponible actuellement' },
+  { id: 'google', label: 'Google', hint: '⚠️ Bloqué par Google' },
+];
+
+export function SearchScreen() {
+  const [query, setQuery] = useState('');
+  const LS_PROVIDER = 'ezzio-search-provider';
+  const [provider, setProvider] = useState<Provider>(() => {
+    try {
+      const saved = localStorage.getItem(LS_PROVIDER);
+      if (saved && ['brave', 'tavily', 'duckduckgo', 'serpdive', 'google'].includes(saved)) {
+        return saved as Provider;
+      }
+    } catch { /* ignore */ }
+    return 'brave';
+  });
+  const [results, setResults] = useState<InnerData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
+  const [usedProvider, setUsedProvider] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) abortRef.current.abort();
+      abortRef.current = new AbortController();
+    };
+  }, []);
+
+  // Mémoriser le provider choisi
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_PROVIDER, provider);
+    } catch { /* ignore */ }
+  }, [provider]);
+
+  const search = async () => {
+    if (!query.trim()) return;
+    setLoading(true);
+    setError(null);
+    setResults(null);
+    setElapsedMs(null);
+    setUsedProvider(null);
+
+    const t0 = performance.now();
+    try {
+      const r = await fetch(`${API_BASE}/api/web-search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, provider, max_results: 5 }),
+        signal: abortRef.current ? abortRef.current.signal : undefined,
+      });
+      const d: ApiResponse = await r.json();
+
+      if (!d.ok) {
+        setError(d.error || `HTTP ${r.status}`);
+        return;
+      }
+      const inner = d.data?.data;
+      if (!inner) {
+        setError('Réponse vide du serveur');
+        return;
+      }
+      setResults(inner);
+      setUsedProvider(d.data?.provider ?? provider);
+      setElapsedMs(Math.round(performance.now() - t0));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erreur réseau');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const items = results?.results ?? [];
+  const current = PROVIDERS.find((p) => p.id === provider);
+
+  return (
+    <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
+      <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16, color: 'var(--text-primary)' }}>
+        Recherche
+      </h2>
+
+      {/* Barre de recherche */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        <select
+          value={provider}
+          onChange={(e) => setProvider(e.target.value as Provider)}
+          className="input-field"
+          style={{ width: 160 }}
+        >
+          {PROVIDERS.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+        <input
+          type="text"
+          placeholder="Que cherchez-vous ?"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && search()}
+          className="input-field"
+          style={{ flex: 1 }}
+        />
+        <button onClick={search} disabled={loading} className="btn-primary">
+          {loading ? 'Recherche…' : 'Rechercher'}
+        </button>
+      </div>
+
+      {current && (
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16, fontFamily: 'var(--font-mono)' }}>
+          {current.hint}
+        </div>
+      )}
+
+      {/* État d'erreur */}
+      {error && (
+        <div style={{
+          padding: 12, marginBottom: 12, borderRadius: 6,
+          background: 'color-mix(in srgb, var(--status-error) 12%, transparent)',
+          color: 'var(--status-error)', fontSize: 13,
+        }}>
+          Erreur : {error}
+        </div>
+      )}
+
+      {/* État de chargement */}
+      {loading && (
+        <div style={{ textAlign: 'center', padding: 40, opacity: 0.5 }}>
+          Recherche en cours…
+        </div>
+      )}
+
+      {/* Méta résultats */}
+      {results && !loading && (
+        <div style={{
+          fontSize: 12, color: 'var(--text-muted)', marginBottom: 12,
+          fontFamily: 'var(--font-mono)',
+        }}>
+          {usedProvider && `[${usedProvider}] `}
+          {items.length} résultat{items.length > 1 ? 's' : ''}
+          {results.total && results.total !== items.length && ` (sur ${results.total})`}
+          {elapsedMs !== null && ` · ${elapsedMs} ms`}
+          {results.raw?.response_time && ` · moteur ${results.raw.response_time.toFixed(2)}s`}
+        </div>
+      )}
+
+      {/* Résultats */}
+      {items.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {items.map((r, i) => (
+            <div
+              key={r.id || i}
+              style={{
+                padding: 14,
+                background: 'var(--bg-card)',
+                borderRadius: 8,
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
+              <a
+                href={r.url}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  fontWeight: 600, fontSize: 15,
+                  color: 'var(--accent-blue)', textDecoration: 'none',
+                  display: 'block', marginBottom: 4,
+                }}
+              >
+                {r.title}
+              </a>
+              <div style={{
+                fontSize: 11, color: 'var(--text-muted)',
+                fontFamily: 'var(--font-mono)', marginBottom: 6,
+              }}>
+                {(() => {
+                  try { return new URL(r.url).hostname; }
+                  catch { return r.url; }
+                })()}
+                {typeof r.score === 'number' && ` · pertinence ${(r.score * 100).toFixed(0)}%`}
+                {r.date && ` · ${r.date}`}
+              </div>
+              {r.content && (
+                <div style={{
+                  fontSize: 13, lineHeight: 1.55,
+                  color: 'var(--text-secondary)',
+                }}>
+                  {r.content.length > 400 ? r.content.slice(0, 400) + '…' : r.content}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* État vide après recherche */}
+      {results && items.length === 0 && !loading && (
+        <div style={{ textAlign: 'center', padding: 40, opacity: 0.5 }}>
+          Aucun résultat
+        </div>
+      )}
+    </div>
+  );
+}

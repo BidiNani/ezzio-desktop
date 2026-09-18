@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Mission,
   ApprovalRequest,
@@ -259,25 +259,19 @@ export function useEzzioApi() {
     }
   }, [getBaseUrl]);
 
-   useEffect(() => {
-     // pingRef garantit qu'on appelle toujours la dernière version de ping
-     // sans recréer l'interval à chaque render (le bug [ping]).
-     const pingRef = { current: ping };
-     pingRef.current = ping;
-     void pingRef.current();
+  useEffect(() => {
+    void ping();
 
-     pingTimer.current = window.setInterval(() => {
-       if (typeof document !== 'undefined' && document.hidden) return;
-       void pingRef.current();
-     }, PING_INTERVAL_MS);
+    pingTimer.current = window.setInterval(() => {
+      void ping();
+    }, PING_INTERVAL_MS);
 
-     return () => {
-       if (pingTimer.current !== null) {
-         window.clearInterval(pingTimer.current);
-         pingTimer.current = null;
-       }
-     };
-   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => {
+      if (pingTimer.current !== null) {
+        window.clearInterval(pingTimer.current);
+      }
+    };
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps -- ping est stable (useCallback)
 
   const setServerAddress = useCallback((address: string) => {
     localStorage.setItem('ezzio_server_address', address);
@@ -550,28 +544,26 @@ export function useEzzioApi() {
     [request]
   );
 
-  return useMemo(() => ({
-      serverConfig,
-      error,
-      setServerAddress,
-      setServerPort,
-      ping,
-      getMissions,
-      getMission,
-      pauseMission,
-      resumeMission,
-      getApprovals,
-      approveMission,
-      rejectMission,
-      getGoals,
-      getHealth,
-      sendChat,
-      searchResearch,
-      getMemoryRecent,
-      searchMemory,
-      getGovernanceSettings,
-      updateGovernanceSettings,
-  }), [
-    serverConfig, error, setServerAddress, setServerPort, ping, getMissions, getMission, pauseMission, resumeMission, getApprovals, approveMission, rejectMission, getGoals, getHealth, sendChat, searchResearch, getMemoryRecent, searchMemory, getGovernanceSettings, updateGovernanceSettings
-  ]);
+  return {
+    serverConfig,
+    error,
+    setServerAddress,
+    setServerPort,
+    ping,
+    getMissions,
+    getMission,
+    pauseMission,
+    resumeMission,
+    getApprovals,
+    approveMission,
+    rejectMission,
+    getGoals,
+    getHealth,
+    sendChat,
+    searchResearch,
+    getMemoryRecent,
+    searchMemory,
+    getGovernanceSettings,
+    updateGovernanceSettings,
+  };
 }

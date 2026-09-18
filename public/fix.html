@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>E-ZZIO Fix</title></head>
+<body style="font-family: monospace; padding: 2em; background:#111; color:#0f0;">
+<h1>E-ZZIO — Fix localStorage</h1>
+<pre id="out"></pre>
+<script>
+localStorage.setItem('ezzio_server_address', '127.0.0.1');
+localStorage.setItem('ezzio_server_port', '8001');
+document.getElementById('out').textContent =
+    'address = ' + localStorage.getItem('ezzio_server_address') + '\n' +
+    'port    = ' + localStorage.getItem('ezzio_server_port') + '\n\n' +
+    'Redirection vers http://localhost:1420 dans 2 secondes...';
+setTimeout(() => { location.href = 'http://localhost:1420'; }, 2000);
+</script>
+</body>
+</html>

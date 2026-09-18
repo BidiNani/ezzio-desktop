@@ -51,3 +51,7 @@ android/app/src/main/assets/public/
 # OS
 .DS_Store
 Thumbs.db
+
+# Archives de backups (audit 2026-09-18)
+*.bak_*
+*.bak2_*
