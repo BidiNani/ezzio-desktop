@@ -20,3 +20,34 @@ src-tauri/target/
 # OS
 .DS_Store
 Thumbs.db
+
+# ============================================================
+# B5-CLEANUP — Backups et temporaires (2026-09-18)
+# ============================================================
+*.bak
+*.bak_*
+*.bak2_*
+*.old
+*.orig
+
+# Rust
+src-tauri/target/
+src-tauri/gen/
+
+# Tauri
+src-tauri/tauri.conf.json.bak*
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/public/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
