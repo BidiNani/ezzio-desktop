@@ -14,6 +14,24 @@ export function buildBaseUrl(config: ServerConfig): string {
   return `http://${host}:${config.port}`;
 }
 
+/**
+ * Lit la cle API depuis localStorage (peut etre absent en environnement test).
+ */
+function readApiKey(): string {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('ezzio_api_key') ?? '';
+    }
+  } catch {
+    // ignore : environnement sans localStorage
+  }
+  return '';
+}
+
+/**
+ * Requete JSON bas niveau. Ajoute X-API-Key et Content-Type par defaut,
+ * fusionne avec les headers fournis dans options.
+ */
 export async function request<T>(
   baseUrl: string,
   endpoint: string,
@@ -21,8 +39,12 @@ export async function request<T>(
 ): Promise<T | null> {
   try {
     const res = await fetch(`${baseUrl}${endpoint}`, {
-      headers: { 'Content-Type': 'application/json' },
       ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': readApiKey(),
+        ...(options.headers as Record<string, string> | undefined),
+      },
     });
     if (!res.ok) return null;
     return (await res.json()) as T;
@@ -33,7 +55,10 @@ export async function request<T>(
 
 export async function ping(baseUrl: string): Promise<boolean> {
   try {
-    const res = await fetch(`${baseUrl}/health`, { method: 'GET' });
+    const res = await fetch(`${baseUrl}/health`, {
+      method: 'GET',
+      headers: { 'X-API-Key': readApiKey() },
+    });
     return res.ok;
   } catch {
     return false;

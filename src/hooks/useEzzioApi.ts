@@ -20,7 +20,7 @@ import {
   normalizeApproval,
   normalizeProvider,
 } from '../api/normalizers';
-import { DEFAULT_PORT, PING_INTERVAL_MS } from '../api/client';
+import { DEFAULT_PORT, PING_INTERVAL_MS, request as apiRequest, buildBaseUrl } from '../api/client';
 
 export const MOCK_MODE = false;
 
@@ -37,57 +37,14 @@ export function useEzzioApi() {
   const pingTimer = useRef<number | null>(null);
 
   const getBaseUrl = useCallback(
-    () => `http://${serverConfig.address}:${serverConfig.port}`,
-    [serverConfig.address, serverConfig.port]
+    () => buildBaseUrl(serverConfig),
+    [serverConfig]
   );
 
-  const failureCount = useRef(0);
-
   const request = useCallback(
-    async <T,>(
-      endpoint: string,
-      options?: RequestInit
-    ): Promise<T | null> => {
-      try {
-        const res = await fetch(`${getBaseUrl()}${endpoint}`, {
-          ...options,
-          headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': (typeof localStorage !== 'undefined'
-              ? localStorage.getItem('ezzio_api_key') : '') ?? '',
-            ...options?.headers,
-          },
-        });
-
-        if (!res.ok) {
-          let detail = `HTTP ${res.status}`;
-          try {
-            const payload = (await res.json()) as {
-              detail?: string;
-            };
-            if (payload.detail) detail = `${detail}: ${payload.detail}`;
-          } catch {
-            // Réponse non JSON : conserver l'erreur HTTP.
-          }
-          throw new Error(detail);
-        }
-
-        failureCount.current = 0;
-        setServerConfig((prev) => (prev.connected ? prev : { ...prev, connected: true }));
-        setError(null);
-
-        return (await res.json()) as T;
-      } catch (err) {
-        failureCount.current += 1;
-        // On ne déclare offline qu'après 2 échecs consécutifs pour éviter le clignotement
-        if (failureCount.current >= 2) {
-          setServerConfig((prev) => (!prev.connected ? prev : { ...prev, connected: false }));
-          setError(err instanceof Error ? err.message : 'Erreur réseau');
-        }
-        return null;
-      }
-    },
-    [getBaseUrl]
+    <T,>(endpoint: string, options: RequestInit = {}) =>
+      apiRequest<T>(buildBaseUrl(serverConfig), endpoint, options),
+    [serverConfig]
   );
 
   const ping = useCallback(async () => {
