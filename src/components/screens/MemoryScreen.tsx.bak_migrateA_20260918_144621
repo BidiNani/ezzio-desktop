@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { API_BASE } from '../../hooks/useApi';
-import { SkeletonList } from '../ui/Skeleton';
-import { RetryButton } from '../ui/RetryButton';
+
+const API = 'http://127.0.0.1:8001';
 
 interface MemoryItem {
   id?: string;
@@ -11,6 +10,10 @@ interface MemoryItem {
   timestamp?: string;
   session_id?: string;
   metadata?: Record<string, unknown>;
+}
+
+interface MemoryResponse {
+  items: MemoryItem[];
 }
 
 export function MemoryScreen() {
@@ -26,7 +29,7 @@ export function MemoryScreen() {
     setError(null);
     try {
       if (q && q.trim()) {
-        const r = await fetch(`${API_BASE}/memory/search`, {
+        const r = await fetch(`${API}/memory/search`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: q, limit: 20 }),
@@ -34,8 +37,8 @@ export function MemoryScreen() {
         const d = await r.json();
         setItems(d.items || d.results || []);
       } else {
-        const r = await fetch(`${API_BASE}/memory/recent?limit=30`);
-        const d = await r.json();
+        const r = await fetch(`${API}/memory/recent?limit=30`);
+        const d: MemoryResponse = await r.json();
         setItems(d.items || []);
       }
     } catch (e) {
@@ -48,8 +51,15 @@ export function MemoryScreen() {
 
   useEffect(() => { void load(); }, []);
 
-  const onSearch = () => { setSearching(true); void load(search); };
-  const clearSearch = () => { setSearch(''); void load(); };
+  const onSearch = () => {
+    setSearching(true);
+    void load(search);
+  };
+
+  const clearSearch = () => {
+    setSearch('');
+    void load();
+  };
 
   return (
     <div style={{ display: 'flex', height: '100%' }}>
@@ -60,6 +70,7 @@ export function MemoryScreen() {
           </h2>
         </div>
 
+        {/* Barre de recherche */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           <input
             type="text"
@@ -78,11 +89,15 @@ export function MemoryScreen() {
           )}
         </div>
 
-        {error && <RetryButton onRetry={() => load()} message={error} />}
+        {error && (
+          <div style={{ padding: 12, marginBottom: 12, borderRadius: 6, background: 'color-mix(in srgb, var(--status-error) 12%, transparent)', color: 'var(--status-error)', fontSize: 13 }}>
+            {error}
+          </div>
+        )}
 
-        {loading && items.length === 0 && <SkeletonList rows={6} rowHeight={40} />}
+        {loading && <div style={{ opacity: 0.6 }}>Chargement…</div>}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: error ? 16 : 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {items.map((m, i) => (
             <button
               key={m.id || i}
@@ -96,11 +111,9 @@ export function MemoryScreen() {
             >
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {m.role && (
-                  <span style={{
-                    marginRight: 8,
-                    color: m.role === 'user' ? 'var(--accent-blue)' : 'var(--status-running)',
-                    fontFamily: 'var(--font-mono)', fontSize: 10,
-                  }}>{m.role}</span>
+                  <span style={{ marginRight: 8, color: m.role === 'user' ? 'var(--accent-blue)' : 'var(--status-running)', fontFamily: 'var(--font-mono)', fontSize: 10 }}>
+                    {m.role}
+                  </span>
                 )}
                 {m.text || m.content || '(vide)'}
               </span>
@@ -109,7 +122,7 @@ export function MemoryScreen() {
               </span>
             </button>
           ))}
-          {!loading && items.length === 0 && !error && (
+          {!loading && items.length === 0 && (
             <div style={{ textAlign: 'center', padding: 40, opacity: 0.5 }}>
               {search ? 'Aucun résultat' : 'Mémoire vide'}
             </div>
@@ -117,21 +130,16 @@ export function MemoryScreen() {
         </div>
       </div>
 
+      {/* Détail */}
       {selected && (
-        <div style={{
-          width: '45%', padding: 24, borderLeft: '1px solid var(--border-subtle)',
-          overflow: 'auto', background: 'var(--bg-card)',
-        }}>
+        <div style={{ width: '45%', padding: 24, borderLeft: '1px solid var(--border-subtle)', overflow: 'auto', background: 'var(--bg-card)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
-              {selected.id || '(pas d id)'}
+              {selected.id || '(pas d\'id)'}
             </span>
             <button onClick={() => setSelected(null)} className="btn-secondary">×</button>
           </div>
-          <pre style={{
-            fontSize: 11, lineHeight: 1.5, whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word', color: 'var(--text-primary)',
-          }}>
+          <pre style={{ fontSize: 11, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: 'var(--text-primary)' }}>
             {JSON.stringify(selected, null, 2)}
           </pre>
         </div>

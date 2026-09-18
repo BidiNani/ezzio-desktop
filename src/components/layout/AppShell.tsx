@@ -42,7 +42,8 @@ export const AppShell: React.FC<AppShellProps> = ({
     <div
       style={{
         display: 'flex',
-        minHeight: '100vh',
+        height: '100vh',
+        width: '100vw',
         background: 'var(--bg-primary)',
         color: 'var(--text-primary)',
         overflow: 'hidden',

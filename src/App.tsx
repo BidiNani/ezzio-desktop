@@ -1,346 +1,212 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AppShell } from './components/layout/AppShell';
-import { useEzzioApi } from './hooks/useEzzioApi';
-import {
-  TabId,
-  Mission,
-  ApprovalRequest,
-  Goal,
-  SystemHealth,
-  ChatMessage,
-} from './types';
 import { ChatScreen } from './components/chat/ChatScreen';
-import { MissionsScreen } from './components/missions/MissionsScreen';
+import { MissionsScreen } from './components/screens/MissionsScreen';
 import { ApprovalsScreen } from './components/screens/ApprovalsScreen';
+import { ObjectivesScreen } from './components/screens/ObjectivesScreen';
 import { ProjectsScreen } from './components/screens/ProjectsScreen';
 import { FilesScreen } from './components/screens/FilesScreen';
-import { ResearchScreen } from './components/screens/ResearchScreen';
+import { SearchScreen } from './components/screens/SearchScreen';
 import { AutomationsScreen } from './components/screens/AutomationsScreen';
 import { MemoryScreen } from './components/screens/MemoryScreen';
+import { AccountsScreen } from './components/screens/AccountsScreen';
 import { HealthScreen } from './components/screens/HealthScreen';
 import { SettingsScreen } from './components/screens/SettingsScreen';
-import { Target } from 'lucide-react';
+import { KillSwitchScreen } from './components/screens/KillSwitchScreen';
+import { useEzzioApi } from './hooks/useEzzioApi';
+import { TabId, SystemHealth } from './types';
 
-function App() {
-  const [activeTab, setActiveTab] = useState<TabId>('chat');
-
-  const [theme, setTheme] = useState<'dark' | 'light'>(
-    (localStorage.getItem('ezzio_theme') as 'dark' | 'light') ?? 'dark'
+// ---------------------------------------------------------------------------
+// Détection mobile simple (pas de dépendance externe)
+// ---------------------------------------------------------------------------
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(query).matches : false
   );
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [showContextPanel, setShowContextPanel] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
+    mql.addEventListener('change', handler);
+    setMatches(mql.matches);
+    return () => mql.removeEventListener('change', handler);
+  }, [query]);
 
+  return matches;
+}
+
+// ---------------------------------------------------------------------------
+// Mapping TabId -> écran. Les onglets sans composant dédié sont mappés sur un
+// écran proche (goals -> ObjectivesScreen, research -> SearchScreen).
+// ---------------------------------------------------------------------------
+type ScreenComponent = () => React.ReactElement;
+
+// Tous les écrans SAUF "settings", qui a un rendu dédié (props spécifiques).
+type StandardTab = Exclude<TabId, 'settings'>;
+
+const SCREEN_MAP: Record<StandardTab, ScreenComponent> = {
+  chat:        () => <ChatScreen />,
+  missions:    () => <MissionsScreen />,
+  approvals:   () => <ApprovalsScreen />,
+  goals:       () => <ObjectivesScreen />,
+  projects:    () => <ProjectsScreen />,
+  files:       () => <FilesScreen />,
+  research:    () => <SearchScreen />,
+  automations: () => <AutomationsScreen />,
+  memory:      () => <MemoryScreen />,
+  accounts:    () => <AccountsScreen />,
+  health:      () => <HealthScreen />,
+};
+
+// ---------------------------------------------------------------------------
+// App
+// ---------------------------------------------------------------------------
+export default function App() {
   const api = useEzzioApi();
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
-  const [missions, setMissions] = useState<Mission[]>([]);
-  const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
-  const [goals, setGoals] = useState<Goal[]>([]);
+  const [activeTab, setActiveTab] = useState<TabId>('chat');
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    const stored = localStorage.getItem('ezzio_theme');
+    return stored === 'light' ? 'light' : 'dark';
+  });
+  const [showContextPanel, setShowContextPanel] = useState(false);
+  const [showKillSwitch, setShowKillSwitch] = useState(false);
+
   const [health, setHealth] = useState<SystemHealth | null>(null);
+  const [pendingApprovals, setPendingApprovals] = useState(0);
 
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: 'init-msg-1',
-      role: 'assistant',
-      text: 'Système E-ZZIO Workspace initialisé. En attente d\'instruction.',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    },
-  ]);
-
-  const [sending, setSending] = useState(false);
-  const [activeModel, setActiveModel] = useState('Auto');
-  const [activeProvider, setActiveProvider] = useState('E-ZZIO');
-
+  // Applique le thème au document + persistance
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('ezzio_theme', theme);
   }, [theme]);
 
+  // Polling santé (toutes les 15s)
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  const refreshData = useCallback(async () => {
-    const [m, a, g, h] = await Promise.all([
-      api.getMissions(),
-      api.getApprovals(),
-      api.getGoals(),
-      api.getHealth(),
-    ]);
-
-    if (m) setMissions(m);
-    if (a) setApprovals(a);
-    if (g) setGoals(g);
-    if (h) setHealth(h);
+    let cancelled = false;
+    const tick = async () => {
+      const h = await api.getHealth();
+      if (!cancelled) setHealth(h);
+    };
+    void tick();
+    const id = window.setInterval(tick, 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
   }, [api]);
 
+  // Polling approbations en attente (toutes les 15s)
   useEffect(() => {
-    void refreshData();
-  }, [refreshData]);
+    let cancelled = false;
+    const tick = async () => {
+      const approvals = await api.getApprovals();
+      if (!cancelled) setPendingApprovals(approvals.length);
+    };
+    void tick();
+    const id = window.setInterval(tick, 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [api]);
 
-  const handleApprove = async (id: string) => {
-    const result = await api.approveMission(id);
-    if (result?.success) {
-      setApprovals((prev) => prev.filter((item) => item.id !== id));
-    }
-  };
-
-  const handleReject = async (id: string) => {
-    const result = await api.rejectMission(id);
-    if (result?.success) {
-      setApprovals((prev) => prev.filter((item) => item.id !== id));
-    }
-  };
-
-  const handleSendChat = async (userText: string) => {
-    if (!userText.trim() || sending) return;
-
-    const sessionStorageKey = 'ezzio_desktop_session_id';
-    let sessionId = localStorage.getItem(sessionStorageKey);
-
-    if (!sessionId) {
-      sessionId =
-        typeof crypto !== 'undefined' && 'randomUUID' in crypto
-          ? crypto.randomUUID()
-          : `desktop-${Date.now()}`;
-      localStorage.setItem(sessionStorageKey, sessionId);
-    }
-
-    const now = new Date().toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-
-    const userMsgId = `user-${Date.now()}`;
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: userMsgId,
-        role: 'user',
-        text: userText,
-        time: now,
-      },
-    ]);
-
-    setSending(true);
-
-    try {
-      const result = await api.sendChat(userText, sessionId);
-
-      const returnedModel = result?.model ?? 'Auto';
-      const returnedProvider = result?.provider ?? 'E-ZZIO';
-
-      setActiveModel(returnedModel);
-      setActiveProvider(returnedProvider);
-
-      const answer =
-        result?.response ??
-        result?.answer ??
-        result?.content ??
-        result?.message;
-
-      if (!answer) {
-        throw new Error('Réponse vide du backend E-ZZIO.');
-      }
-
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: `asst-${Date.now()}`,
-          role: 'assistant',
-          text: answer,
-          time: new Date().toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
-          model: returnedModel,
-          provider: returnedProvider,
-          status: 'success',
-        },
-      ]);
-    } catch (err) {
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: `err-${Date.now()}`,
-          role: 'assistant',
-          text:
-            err instanceof Error
-              ? `Erreur E-ZZIO : ${err.message}`
-              : 'Erreur E-ZZIO : réponse indisponible.',
-          time: new Date().toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
-          status: 'error',
-        },
-      ]);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const renderGoals = () => (
-    <div style={{ padding: '24px 16px', maxWidth: 850, margin: '0 auto', width: '100%' }}>
-      <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 4px', color: 'var(--text-primary)' }}>
-        Objectifs Stratégiques
-      </h2>
-      <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 20px' }}>
-        Objectifs persistants et état d'avancement
-      </p>
-
-      {goals.length === 0 ? (
-        <div
-          style={{
-            padding: 48,
-            textAlign: 'center',
-            background: 'var(--bg-card)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px dashed var(--border-subtle)',
-          }}
-        >
-          <Target style={{ width: 40, height: 40, color: 'var(--text-muted)', marginBottom: 12 }} />
-          <h3 style={{ fontSize: 16, margin: 0, color: 'var(--text-primary)' }}>
-            Aucun objectif défini
-          </h3>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '6px 0 0' }}>
-            Aucun objectif stratégique n'est actuellement suivi par le Master.
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {goals.map((g) => (
-            <div
-              key={g.id}
-              style={{
-                padding: 20,
-                background: 'var(--bg-card)',
-                borderRadius: 'var(--radius-md)',
-                border: g.priority === 'critical' ? '2px solid var(--accent-purple)' : '1px solid var(--border-subtle)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <Target size={18} color={g.priority === 'critical' ? 'var(--accent-purple)' : 'var(--text-muted)'} />
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{g.title}</div>
-                    <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                      PRIORITY={g.priority.toUpperCase()} · STATUS={g.status.toUpperCase()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
-                <div style={{ flex: 1, height: 8, background: 'var(--bg-secondary)', borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{ width: `${g.progress}%`, height: '100%', background: 'var(--accent-purple)', borderRadius: 4 }} />
-                </div>
-                <span style={{ width: 42, textAlign: 'right', fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--accent-purple)', fontWeight: 600 }}>
-                  {g.progress}%
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+  // Handlers réseau
+  const handleUpdateAddress = useCallback(
+    (address: string) => api.setServerAddress(address),
+    [api]
+  );
+  const handleUpdatePort = useCallback(
+    (port: number) => api.setServerPort(port),
+    [api]
   );
 
-  const renderActiveScreen = () => {
-    switch (activeTab) {
-      case 'chat':
-        return (
-          <ChatScreen
-            messages={chatMessages}
-            sending={sending}
-            onSendMessage={handleSendChat}
-            connected={api.serverConfig.connected}
-          />
-        );
-      case 'missions':
-        return <MissionsScreen missions={missions} />;
-      case 'approvals':
-        return (
-          <ApprovalsScreen
-            approvals={approvals}
-            onApprove={handleApprove}
-            onReject={handleReject}
-          />
-        );
-      case 'goals':
-        return renderGoals();
-      case 'projects':
-        return <ProjectsScreen />;
-      case 'files':
-        return <FilesScreen />;
-      case 'research':
-        return (
-          <ResearchScreen
-            onSearch={api.searchResearch}
-            connected={api.serverConfig.connected}
-          />
-        );
-      case 'automations':
-        return <AutomationsScreen />;
-      case 'memory':
-        return (
-          <MemoryScreen
-            onGetRecent={api.getMemoryRecent}
-            onSearch={api.searchMemory}
-            connected={api.serverConfig.connected}
-          />
-        );
-      case 'health':
-        return (
-          <HealthScreen
-            health={health}
-            connected={api.serverConfig.connected}
-            onRefresh={refreshData}
-          />
-        );
-      case 'settings':
-        return (
-          <SettingsScreen
-            theme={theme}
-            onThemeChange={setTheme}
-            serverConfig={api.serverConfig}
-            onUpdateAddress={api.setServerAddress}
-            onUpdatePort={api.setServerPort}
-            onPing={api.ping}
-            getGovernanceSettings={api.getGovernanceSettings}
-            updateGovernanceSettings={api.updateGovernanceSettings}
-          />
-        );
-      default:
-        return null;
+  const handleToggleTheme = useCallback(() => {
+    setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+  }, []);
+
+  // Rendu de l'écran actif
+  const renderScreen = (): React.ReactElement => {
+    if (activeTab === 'settings') {
+      return (
+        <SettingsScreen />
+      );
     }
+    const Screen = SCREEN_MAP[activeTab as StandardTab];
+    return Screen();
   };
 
   return (
-    <AppShell
-      activeTab={activeTab}
-      onNavigate={setActiveTab}
-      pendingApprovals={approvals.length}
-      serverConfig={api.serverConfig}
-      activeModel={activeModel}
-      activeProvider={activeProvider}
-      health={health}
-      theme={theme}
-      onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-      showContextPanel={showContextPanel}
-      onToggleContextPanel={() => setShowContextPanel((prev) => !prev)}
-      onKillSwitch={() => {
-        if (confirm('Arrêter immédiatement tous les workers et swarms en cours ?')) {
-          alert('Signal de terminaison propre diffusé.');
-        }
-      }}
-      isMobile={isMobile}
-    >
-      {renderActiveScreen()}
-    </AppShell>
+    <>
+      <AppShell
+        activeTab={activeTab}
+        onNavigate={setActiveTab}
+        pendingApprovals={pendingApprovals}
+        serverConfig={api.serverConfig}
+        activeModel="auto"
+        activeProvider="auto"
+        health={health}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        showContextPanel={showContextPanel}
+        onToggleContextPanel={() => setShowContextPanel((v) => !v)}
+        onKillSwitch={() => setShowKillSwitch(true)}
+        isMobile={isMobile}
+      >
+        {renderScreen()}
+      </AppShell>
+
+      {showKillSwitch && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 16,
+          }}
+          onClick={() => setShowKillSwitch(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 12,
+              maxWidth: 700,
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              position: 'relative',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowKillSwitch(false)}
+              aria-label="Fermer"
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-secondary)',
+                fontSize: 20,
+                cursor: 'pointer',
+              }}
+            >
+              ×
+            </button>
+            <KillSwitchScreen />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
-
-export default App;

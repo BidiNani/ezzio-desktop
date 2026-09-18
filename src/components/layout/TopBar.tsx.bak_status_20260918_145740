@@ -1,5 +1,4 @@
 import React from 'react';
-import { StatusIndicator } from '../ui/StatusIndicator';
 import { SystemStatus } from '../ui/SystemStatus';
 import { PanelRight, Search, Sun, Moon } from 'lucide-react';
 import { ServerConfig } from '../../types';

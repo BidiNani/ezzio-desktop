@@ -83,6 +83,37 @@ export function ChatScreen({ onSendMessage, initialMessages }: ChatScreenProps) 
     }
   };
 
+    try {
+      if (onSendMessage) {
+        await onSendMessage(text);
+      } else {
+        // Fallback local
+        const r = await fetch('http://127.0.0.1:8001/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: text }),
+        });
+        const data = await r.json();
+        setMessages(prev => [...prev, {
+          id: `a-${Date.now()}`,
+          role: 'assistant',
+          content: data.response || data.content || '(pas de réponse)',
+          timestamp: new Date().toISOString(),
+          model: data.model,
+        }]);
+      }
+    } catch (e: any) {
+      setMessages(prev => [...prev, {
+        id: `e-${Date.now()}`,
+        role: 'assistant',
+        content: `Erreur : ${e.message}`,
+        timestamp: new Date().toISOString(),
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div
       style={{

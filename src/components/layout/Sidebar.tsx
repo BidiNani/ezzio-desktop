@@ -12,6 +12,7 @@ import {
   Activity,
   Settings,
   Square,
+  Link2,
   LucideIcon,
 } from 'lucide-react';
 import { TabId } from '../../types';
@@ -39,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'research', label: 'Recherche', icon: Compass },
   { id: 'automations', label: 'Automatisations', icon: Zap },
   { id: 'memory', label: 'Mémoire', icon: Database },
+  { id: 'accounts', label: 'Comptes', icon: Link2 },
   { id: 'health', label: 'Santé', icon: Activity },
   { id: 'settings', label: 'Réglages', icon: Settings },
 ];

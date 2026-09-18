@@ -76,6 +76,7 @@
 
 body, html {
   height: 100%;
+  overflow: hidden;
   width: 100%;
   overflow-x: hidden;
   background-color: var(--bg-primary);
@@ -88,7 +89,8 @@ body, html {
 }
 
 #root {
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -166,3 +168,88 @@ body, html {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-secondary); }
 ::-webkit-scrollbar-thumb { background: var(--border-accent); border-radius: 3px; }
+
+/* ============================================================
+   THÈMES ALTERNATIFS (data-theme)
+   ============================================================ */
+
+/* Light */
+[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f7;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f0f0f2;
+  --text-primary: #0a0a0f;
+  --text-secondary: #4a4a55;
+  --text-muted: #8a8a95;
+  --border-subtle: #e0e0e5;
+  --border-accent: #c0c0c8;
+}
+
+/* Midnight (bleu nuit) */
+[data-theme="midnight"] {
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #121829;
+  --bg-card: #1a2138;
+  --bg-card-hover: #232b45;
+  --text-primary: #e8edf7;
+  --text-secondary: #9aa5c0;
+  --text-muted: #5c6885;
+  --border-subtle: #232b45;
+  --border-accent: #34406a;
+  --accent-blue: #5b8def;
+}
+
+/* Nord */
+[data-theme="nord"] {
+  --bg-primary: #2e3440;
+  --bg-secondary: #3b4252;
+  --bg-card: #434c5e;
+  --bg-card-hover: #4c566a;
+  --text-primary: #eceff4;
+  --text-secondary: #d8dee9;
+  --text-muted: #7b88a1;
+  --border-subtle: #4c566a;
+  --border-accent: #5e6b82;
+  --accent-blue: #88c0d0;
+}
+
+/* Solarized */
+[data-theme="solarized"] {
+  --bg-primary: #002b36;
+  --bg-secondary: #073642;
+  --bg-card: #0e4654;
+  --bg-card-hover: #145263;
+  --text-primary: #eee8d5;
+  --text-secondary: #93a1a1;
+  --text-muted: #586e75;
+  --border-subtle: #145263;
+  --border-accent: #268bd2;
+  --accent-blue: #268bd2;
+}
+
+/* ============================================================
+   DENSITÉS (data-density)
+   ============================================================ */
+[data-density="compact"] {
+  --spacing-scale: 0.75;
+}
+[data-density="normal"] {
+  --spacing-scale: 1;
+}
+[data-density="comfy"] {
+  --spacing-scale: 1.25;
+}
+
+/* ============================================================
+   ANIMATIONS GLOBALES
+   ============================================================ */
+@keyframes ezzio-skeleton {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes ezzio-toast-in {
+  0%   { opacity: 0; transform: translateX(20px); }
+  100% { opacity: 1; transform: translateX(0); }
+}

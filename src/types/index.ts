@@ -13,6 +13,7 @@ export type TabId =
   | 'research'
   | 'automations'
   | 'memory'
+  | 'accounts'
   | 'health'
   | 'settings';
 
@@ -94,8 +95,8 @@ export interface ServerConfig {
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
-  text: string;
-  time: string;
+  content: string;
+  timestamp: string;
   model?: string;
   provider?: string;
   status?: 'sending' | 'success' | 'error';

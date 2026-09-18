@@ -1,198 +1,68 @@
-import React from 'react';
-import { ApprovalRequest } from '../../types';
-import { Shield, AlertTriangle, Check, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
-interface ApprovalsScreenProps {
-  approvals: ApprovalRequest[];
-  onApprove: (id: string) => Promise<void>;
-  onReject: (id: string) => Promise<void>;
+const API = 'http://127.0.0.1:8001';
+
+interface Approval {
+  id: string;
+  title?: string;
+  description?: string;
+  status: string;
+  decision?: string;
+  created_at: string;
 }
 
-export const ApprovalsScreen: React.FC<ApprovalsScreenProps> = ({
-  approvals,
-  onApprove,
-  onReject,
-}) => {
+export function ApprovalsScreen() {
+  const [items, setItems] = useState<Approval[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    const r = await fetch(`${API}/api/approvals`);
+    const d = await r.json();
+    setItems(d.data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const decide = async (id: string, decision: string) => {
+    await fetch(`${API}/api/approvals/${id}/decide`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision }),
+    });
+    load();
+  };
+
   return (
-    <div style={{ padding: '24px 16px', maxWidth: 850, margin: '0 auto', width: '100%' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 20,
-          gap: 12,
-        }}
-      >
-        <div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 4px', color: 'var(--text-primary)' }}>
-            Approbations Human-in-the-Loop
-          </h2>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-            Actions sensibles nécessitant l'accord explicite d'un opérateur
-          </p>
-        </div>
+    <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
+      <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>Approbations</h2>
 
-        <span
-          style={{
-            padding: '4px 12px',
-            borderRadius: 'var(--radius-sm)',
-            fontSize: 12,
-            fontFamily: 'var(--font-mono)',
-            background: approvals.length > 0
-              ? 'color-mix(in srgb, var(--status-pending) 20%, transparent)'
-              : 'color-mix(in srgb, var(--status-running) 20%, transparent)',
-            color: approvals.length > 0 ? 'var(--status-pending)' : 'var(--status-running)',
-            border: `1px solid ${
-              approvals.length > 0
-                ? 'color-mix(in srgb, var(--status-pending) 40%, transparent)'
-                : 'color-mix(in srgb, var(--status-running) 40%, transparent)'
-            }`,
-            fontWeight: 600,
-          }}
-        >
-          {approvals.length} EN ATTENTE
-        </span>
-      </div>
+      {loading && <div style={{ opacity: 0.6 }}>Chargement…</div>}
 
-      {approvals.length === 0 ? (
-        <div
-          style={{
-            padding: 48,
-            textAlign: 'center',
-            background: 'var(--bg-card)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px dashed var(--border-subtle)',
-          }}
-        >
-          <Shield
-            style={{
-              width: 40,
-              height: 40,
-              color: 'var(--status-running)',
-              marginBottom: 12,
-            }}
-          />
-          <h3 style={{ fontSize: 16, margin: 0, color: 'var(--text-primary)' }}>
-            Aucune approbation en attente
-          </h3>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '6px 0 0' }}>
-            Toutes les actions sensibles ont été traitées.
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {approvals.map((req) => (
-            <div
-              key={req.id}
-              style={{
-                padding: 20,
-                background: 'var(--bg-card)',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid color-mix(in srgb, var(--status-pending) 40%, transparent)',
-                boxShadow: 'var(--shadow-card)',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: 12,
-                  marginBottom: 10,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <AlertTriangle size={16} color="var(--status-pending)" />
-                  <span
-                    style={{
-                      fontSize: 12,
-                      fontFamily: 'var(--font-mono)',
-                      color: 'var(--status-pending)',
-                      fontWeight: 600,
-                    }}
-                  >
-                    HITL · {req.missionTitle}
-                  </span>
-                </div>
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontFamily: 'var(--font-mono)',
-                    color: 'var(--text-muted)',
-                  }}
-                >
-                  {req.id}
-                </span>
-              </div>
-
-              <p
-                style={{
-                  fontSize: 14,
-                  color: 'var(--text-primary)',
-                  margin: '0 0 8px',
-                  lineHeight: 1.5,
-                  fontWeight: 500,
-                }}
-              >
-                {req.requestedAction}
-              </p>
-
-              <p
-                style={{
-                  fontSize: 13,
-                  color: 'var(--text-secondary)',
-                  margin: '0 0 16px',
-                  lineHeight: 1.5,
-                }}
-              >
-                {req.context}
-              </p>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-                <button
-                  onClick={() => void onReject(req.id)}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'var(--bg-card-hover)',
-                    color: 'var(--status-error)',
-                    border: '1px solid color-mix(in srgb, var(--status-error) 30%, transparent)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    fontSize: 13,
-                    fontWeight: 500,
-                  }}
-                >
-                  <X size={14} />
-                  Rejeter
-                </button>
-
-                <button
-                  onClick={() => void onApprove(req.id)}
-                  style={{
-                    padding: '8px 18px',
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'var(--status-running)',
-                    color: '#000',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
-                >
-                  <Check size={14} />
-                  Approuver
-                </button>
-              </div>
-            </div>
-          ))}
+      {!loading && items.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 40, opacity: 0.5 }}>
+          Aucune action en attente d'approbation
         </div>
       )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {items.map(a => (
+          <div key={a.id} style={{ padding: 16, background: 'var(--bg-card)', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>{a.title || 'Action'}</div>
+            {a.description && <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 12 }}>{a.description}</div>}
+            {a.status === 'decided' ? (
+              <div style={{ fontSize: 12, color: a.decision === 'approve' ? 'var(--status-running)' : 'var(--status-error)' }}>
+                {a.decision === 'approve' ? '✓ Approuvé' : '✗ Refusé'}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => decide(a.id, 'approve')} className="btn-primary">✓ Approuver</button>
+                <button onClick={() => decide(a.id, 'reject')} className="btn-secondary">✗ Refuser</button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
-};
+}

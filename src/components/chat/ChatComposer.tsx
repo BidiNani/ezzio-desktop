@@ -1,138 +1,103 @@
-import React, { useState } from 'react';
-import { Send, Paperclip, Mic } from 'lucide-react';
+import { useState, useRef, KeyboardEvent } from 'react';
 
 interface ChatComposerProps {
-  onSend: (text: string) => void;
-  sending: boolean;
+  onSend: (message: string) => void;
   disabled?: boolean;
 }
 
-export const ChatComposer: React.FC<ChatComposerProps> = ({
-  onSend,
-  sending,
-  disabled = false,
-}) => {
+export function ChatComposer({ onSend, disabled }: ChatComposerProps) {
   const [text, setText] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = text.trim();
-    if (!trimmed || sending || disabled) return;
-    onSend(trimmed);
+  const handleSend = () => {
+    if (!text.trim() || disabled) return;
+    onSend(text.trim());
     setText('');
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
     }
   };
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleInput = () => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 200) + 'px';
+  };
+
   return (
-    <form
-      onSubmit={handleSubmit}
+    <div
       style={{
-        padding: '12px 16px',
-        background: 'var(--bg-secondary)',
+        padding: '12px 20px 16px',
         borderTop: '1px solid var(--border-subtle)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
+        background: 'var(--bg-card)',
       }}
     >
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        {/* Actions bar (attachments, voice UI placeholders) */}
-        <button
-          type="button"
-          title="Joindre un fichier (UI)"
-          onClick={() => alert('Sélection de fichier : fonction visuelle préparée.')}
-          disabled={sending || disabled}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-            padding: 8,
-            borderRadius: 'var(--radius-sm)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Paperclip size={18} />
-        </button>
-
-        <button
-          type="button"
-          title="Entrée vocale (UI)"
-          onClick={() => alert('Entrée vocale : fonction visuelle préparée.')}
-          disabled={sending || disabled}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-            padding: 8,
-            borderRadius: 'var(--radius-sm)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Mic size={18} />
-        </button>
-
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Envoyer une instruction au Master Governor... (Entrée pour envoyer)"
-          disabled={sending || disabled}
-          rows={1}
-          style={{
-            flex: 1,
-            resize: 'none',
-            padding: '10px 14px',
-            borderRadius: 'var(--radius-md)',
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-subtle)',
-            color: 'var(--text-primary)',
-            fontSize: 14,
-            fontFamily: 'inherit',
-            lineHeight: 1.4,
-            outline: 'none',
-            minHeight: 42,
-            maxHeight: 120,
-          }}
-        />
-
-        <button
-          type="submit"
-          disabled={!text.trim() || sending || disabled}
-          className="btn-primary"
-          style={{
-            padding: '10px 16px',
-            borderRadius: 'var(--radius-md)',
-            minWidth: 44,
-          }}
-        >
-          <Send size={16} />
-        </button>
-      </div>
-
       <div
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: 11,
-          color: 'var(--text-muted)',
-          padding: '0 4px',
+          alignItems: 'flex-end',
+          gap: 8,
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 10,
+          padding: '8px 12px',
+          transition: 'border-color 0.15s',
         }}
       >
-        <span>Routage souverain E-ZZIO (ModelRouter autoritaire)</span>
-        <span>Maj+Entrée pour saut de ligne</span>
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onInput={handleInput}
+          onKeyDown={handleKeyDown}
+          placeholder="Écrire un message… (Entrée pour envoyer, Maj+Entrée pour saut de ligne)"
+          disabled={disabled}
+          rows={1}
+          style={{
+            flex: 1,
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            resize: 'none',
+            color: 'var(--text-primary)',
+            fontSize: 13,
+            fontFamily: 'inherit',
+            lineHeight: 1.5,
+            maxHeight: 200,
+          }}
+        />
+        <button
+          onClick={handleSend}
+          disabled={disabled || !text.trim()}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 6,
+            background: text.trim() && !disabled ? 'var(--accent-blue)' : 'var(--bg-card)',
+            color: text.trim() && !disabled ? '#fff' : 'var(--text-muted)',
+            border: 'none',
+            cursor: text.trim() && !disabled ? 'pointer' : 'not-allowed',
+            fontSize: 16,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.15s',
+          }}
+        >
+          ↑
+        </button>
       </div>
-    </form>
+      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6, textAlign: 'center' }}>
+        Routage souverain E-ZZIO (ModelRouter autoritaire)
+      </div>
+    </div>
   );
-};
+}

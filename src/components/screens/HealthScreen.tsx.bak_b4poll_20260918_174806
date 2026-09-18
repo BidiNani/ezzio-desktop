@@ -61,7 +61,7 @@ export function HealthScreen() {
 
   useEffect(() => {
     void load();
-    const id = window.setInterval(load, 30000);
+    const id = window.setInterval(load, 15000);
     return () => window.clearInterval(id);
   }, [load]);
 
