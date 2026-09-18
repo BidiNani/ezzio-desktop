@@ -14,8 +14,8 @@ export function KillSwitchScreen() {
       const r = await fetch(`${API}/api/kill`, { method: 'POST' });
       const d = await r.json();
       setResult(d);
-    } catch (e: any) {
-      setResult({ ok: false, error: e.message });
+    } catch (e: unknown) {
+      setResult({ ok: false, error: e instanceof Error ? e.message : String(e) });
     } finally {
       setLoading(false);
       setConfirm('');
