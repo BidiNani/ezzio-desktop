@@ -8,7 +8,18 @@ import reactRefresh from "eslint-plugin-react-refresh";
 
 export default [
   // Fichiers ignores
-  { ignores: ["dist/**", "node_modules/**", "coverage/**", "*.config.js", "*.config.ts"] },
+  { ignores: [
+    "dist/**",
+    "node_modules/**",
+    "coverage/**",
+    "*.config.js",
+    "*.config.ts",
+    // Dossiers de build natifs (bundles minifies, pas du code source)
+    "android/**",
+    "ios/**",
+    "src-tauri/target/**",
+    "src-tauri/gen/**",
+  ] },
 
   // Config de base TS/React
   {
