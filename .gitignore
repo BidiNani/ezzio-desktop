@@ -55,3 +55,11 @@ Thumbs.db
 # Archives de backups (audit 2026-09-18)
 *.bak_*
 *.bak2_*
+
+# Vite logs
+vite_*.log
+vite_*.log.err
+vite_clean.log*
+
+# Backups locaux
+_backup_refonte_*/

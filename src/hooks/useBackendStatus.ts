@@ -1,8 +1,8 @@
 /**
- * useBackendStatus — polling /health toutes les 10s.
- * Retourne { online: boolean, lastCheck: Date | null, latency: number | null }.
+ * useBackendStatus — polling /health conscient du cycle de vie.
+ * Pause si l'onglet est caché (document.hidden).
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { usePolling } from './usePolling';
 import { API_BASE } from './useApi';
 
@@ -17,37 +17,24 @@ export function useBackendStatus(intervalMs = 30000): BackendStatus {
     online: false, lastCheck: null, latency: null,
   });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function check() {
-      const t0 = performance.now();
-      try {
-        const r = await fetch(`${API_BASE}/health`, {
-          signal: AbortSignal.timeout(3000),
-        });
-        const ms = Math.round(performance.now() - t0);
-        if (!cancelled) {
-          setStatus({
-            online: r.ok,
-            lastCheck: new Date(),
-            latency: r.ok ? ms : null,
-          });
-        }
-      } catch {
-        if (!cancelled) {
-          setStatus({ online: false, lastCheck: new Date(), latency: null });
-        }
-      }
+  const check = useCallback(async () => {
+    const t0 = performance.now();
+    try {
+      const r = await fetch(`${API_BASE}/health`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      const ms = Math.round(performance.now() - t0);
+      setStatus({
+        online: r.ok,
+        lastCheck: new Date(),
+        latency: r.ok ? ms : null,
+      });
+    } catch {
+      setStatus({ online: false, lastCheck: new Date(), latency: null });
     }
+  }, []);
 
-    void check();
-    const id = window.setInterval(check, intervalMs);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, [intervalMs]);
+  usePolling(check, intervalMs, true);
 
   return status;
 }
