@@ -14,6 +14,7 @@ import { HealthScreen } from './components/screens/HealthScreen';
 import { SettingsScreen } from './components/screens/SettingsScreen';
 import { KillSwitchScreen } from './components/screens/KillSwitchScreen';
 import { useEzzioApi } from './hooks/useEzzioApi';
+import { usePolling } from './hooks/usePolling';
 import { TabId, SystemHealth } from './types';
 
 // ---------------------------------------------------------------------------
@@ -83,34 +84,20 @@ export default function App() {
   }, [theme]);
 
   // Polling santé (toutes les 15s)
-  useEffect(() => {
-    let cancelled = false;
-    const tick = async () => {
-      const h = await api.getHealth();
-      if (!cancelled) setHealth(h);
-    };
-    void tick();
-    const id = window.setInterval(() => { if (document.hidden) return; tick(); }, 30000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
+  const tickHealth = useCallback(async () => {
+    const h = await api.getHealth();
+    setHealth(h);
   }, [api]);
 
+  usePolling(tickHealth, 30000, true);
+
   // Polling approbations en attente (toutes les 15s)
-  useEffect(() => {
-    let cancelled = false;
-    const tick = async () => {
-      const approvals = await api.getApprovals();
-      if (!cancelled) setPendingApprovals(approvals.length);
-    };
-    void tick();
-    const id = window.setInterval(() => { if (document.hidden) return; tick(); }, 30000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
+  const tickApprovals = useCallback(async () => {
+    const approvals = await api.getApprovals();
+    setPendingApprovals(approvals.length);
   }, [api]);
+
+  usePolling(tickApprovals, 30000, true);
 
   // Handlers réseau
   const handleUpdateAddress = useCallback(
