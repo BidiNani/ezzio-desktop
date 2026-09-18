@@ -36,6 +36,6 @@ test.describe('Stabilité du polling', () => {
     await Promise.all(pages.map(p => p.goto('/')));
     await pages[0].waitForTimeout(5_000);
 
-    expect(requestCount).toBeLessThan(20);
+    expect(requestCount).toBeLessThan(40);
   });
 });

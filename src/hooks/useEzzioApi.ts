@@ -198,6 +198,8 @@ export function useEzzioApi() {
           ...options,
           headers: {
             'Content-Type': 'application/json',
+            'X-API-Key': (typeof localStorage !== 'undefined'
+              ? localStorage.getItem('ezzio_api_key') : '') ?? '',
             ...options?.headers,
           },
         });
