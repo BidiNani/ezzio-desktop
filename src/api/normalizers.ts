@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars -- exports publics consommes par d'autres modules */
 // Normalizers : transforment les reponses brutes du backend en types applicatifs.
 // Extraits de useEzzioApi.ts (refactor 2026-09-19).
 

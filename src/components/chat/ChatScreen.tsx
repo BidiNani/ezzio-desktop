@@ -5,11 +5,11 @@ import { ChatComposer } from './ChatComposer';
 import { ChatMessage } from '../../types';
 
 interface ChatScreenProps {
-  onSendMessage?: (message: string) => Promise<void>;
+  _onSendMessage?: (message: string) => Promise<void>;
   initialMessages?: ChatMessage[];
 }
 
-export function ChatScreen({ onSendMessage, initialMessages }: ChatScreenProps) {
+export function ChatScreen({ _onSendMessage, initialMessages }: ChatScreenProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages || [
     {
       id: 'welcome',

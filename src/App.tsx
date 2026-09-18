@@ -100,14 +100,6 @@ export default function App() {
   usePolling(tickApprovals, 30000, true);
 
   // Handlers réseau
-  const handleUpdateAddress = useCallback(
-    (address: string) => api.setServerAddress(address),
-    [api]
-  );
-  const handleUpdatePort = useCallback(
-    (port: number) => api.setServerPort(port),
-    [api]
-  );
 
   const handleToggleTheme = useCallback(() => {
     setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
