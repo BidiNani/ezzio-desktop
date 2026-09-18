@@ -43,7 +43,7 @@ test.describe('Stabilité du polling', () => {
     await pages[0].waitForTimeout(8_000);
 
     const avgPerPage = requestCount / 3;
-    console.log(`[e2e] Total: ${requestCount} req, moyenne ${avgPerPage.toFixed(1)}/onglet`);
+    // console.log(`[e2e] Total: ${requestCount} req, moyenne ${avgPerPage.toFixed(1)}/onglet`);
     expect(avgPerPage).toBeLessThan(15);
   });
 });
