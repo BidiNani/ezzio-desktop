@@ -63,3 +63,4 @@ vite_clean.log*
 
 # Backups locaux
 _backup_refonte_*/
+# Backups locaux (script finalize)
