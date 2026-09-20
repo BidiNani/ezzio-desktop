@@ -86,3 +86,6 @@ tsc_diagnostic.txt
 
 # Scripts Python temporaires
 _fix_*.py
+
+# Rapports d'audit
+audit_*.txt
