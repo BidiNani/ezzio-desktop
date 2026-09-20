@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">E-zzio</string>
     <string name="title_activity_main">E-zzio</string>
-    <string name="package_name">com.ezzio.mobile</string>
-    <string name="custom_url_scheme">com.ezzio.mobile</string>
+    <string name="package_name">ai.ezzio.desktop</string>
+    <string name="custom_url_scheme">ai.ezzio.desktop</string>
 </resources>

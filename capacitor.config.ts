@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.ezzio.mobile',
+  appId: 'ai.ezzio.desktop',
   appName: 'E-zzio',
   webDir: 'dist'
 };
