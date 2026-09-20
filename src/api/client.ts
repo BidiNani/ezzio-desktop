@@ -9,21 +9,26 @@ export interface ServerConfig {
   port: number;
 }
 
+/**
+ * Construit l'URL de base.
+ * Priorite : VITE_API_URL > config locale (address + port).
+ * Le parametre config est OBLIGATOIRE (contrat P0.3).
+ */
 export function buildBaseUrl(config: ServerConfig): string {
-  // Priorite : VITE_API_URL > config locale
   const envUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) as string | undefined;
   if (envUrl) {
     return envUrl.replace(/\/+$/, '');
   }
   const host = config.address || '127.0.0.1';
-  return `http://${host}:${config.port}`;
+  const port = config.port || DEFAULT_PORT;
+  return `http://${host}:${port}`;
 }
 
 /**
- * Lit la cle API depuis localStorage (peut etre absent en environnement test).
+ * Lit la cle API depuis VITE_API_KEY ou localStorage.
+ * Priorite : VITE_API_KEY > localStorage.
  */
-function readApiKey(): string {
-  // Priorite : VITE_API_KEY > localStorage
+export function readApiKey(): string {
   const envKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_KEY) as string | undefined;
   if (envKey) {
     return envKey;
@@ -39,8 +44,7 @@ function readApiKey(): string {
 }
 
 /**
- * Requete JSON bas niveau. Ajoute X-API-Key et Content-Type par defaut,
- * fusionne avec les headers fournis dans options.
+ * Requete JSON bas niveau. Ajoute X-API-Key et Content-Type par defaut.
  */
 export async function request<T>(
   baseUrl: string,
