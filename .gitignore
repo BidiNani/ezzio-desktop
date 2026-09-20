@@ -1,4 +1,4 @@
-﻿# Dependances
+# Dependances
 node_modules/
 
 # Build frontend
@@ -63,7 +63,7 @@ vite_clean.log*
 
 # Backups locaux
 _backup_refonte_*/
-# Backups locaux (script finalize)
+
 # Playwright
 test-results/
 playwright-report/
