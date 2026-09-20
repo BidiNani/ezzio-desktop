@@ -49,6 +49,22 @@ function isFreeModel(m: ModelEntry): boolean {
   return false;
 }
 
+function findFirstFreeModel(models: ModelsByProvider): string | null {
+  // Auto-sélectionne le premier modèle gratuit disponible
+  // Ordre de préférence : gemini, groq, nvidia, openrouter, ollama
+  const preferredOrder = ['gemini', 'groq', 'nvidia', 'openrouter', 'ollama'];
+  for (const provider of preferredOrder) {
+    const list = models[provider as keyof ModelsByProvider];
+    if (!Array.isArray(list)) continue;
+    const entries = list.map(normalizeEntry);
+    const free = entries.filter(isFreeModel);
+    if (free.length > 0) {
+      return free[0].id;
+    }
+  }
+  return null;
+}
+
 function formatContext(ctx: number | null | undefined): string {
   if (!ctx) return '';
   if (ctx >= 1_000_000) return `${(ctx / 1_000_000).toFixed(1)}M`;
@@ -93,7 +109,17 @@ export function ModelSelector({ value, onChange }: Props) {
     setLoading(true);
     try {
       const r = await fetch(`http://127.0.0.1:8001/api/models/all${force ? '?force_refresh=true' : ''}`);
-      setModels(await r.json());
+      const data = await r.json();
+      setModels(data);
+
+      // Auto-sélection du premier modèle gratuit si value est vide
+      // Corrige l'incohérence "auto" → modèles différents côté backend
+      if (!value) {
+        const firstFree = findFirstFreeModel(data);
+        if (firstFree) {
+          onChange(firstFree);
+        }
+      }
     } catch (e) {
       console.error('ModelSelector load failed:', e);
     } finally {
