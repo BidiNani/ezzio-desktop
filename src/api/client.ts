@@ -10,6 +10,11 @@ export interface ServerConfig {
 }
 
 export function buildBaseUrl(config: ServerConfig): string {
+  // Priorite : VITE_API_URL > config locale
+  const envUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) as string | undefined;
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, '');
+  }
   const host = config.address || '127.0.0.1';
   return `http://${host}:${config.port}`;
 }
@@ -18,6 +23,11 @@ export function buildBaseUrl(config: ServerConfig): string {
  * Lit la cle API depuis localStorage (peut etre absent en environnement test).
  */
 function readApiKey(): string {
+  // Priorite : VITE_API_KEY > localStorage
+  const envKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_KEY) as string | undefined;
+  if (envKey) {
+    return envKey;
+  }
   try {
     if (typeof localStorage !== 'undefined') {
       return localStorage.getItem('ezzio_api_key') ?? '';

@@ -62,6 +62,7 @@ vite_*.log.err
 vite_clean.log*
 
 # Backups locaux
+_backup_*/
 _backup_refonte_*/
 
 # Playwright
