@@ -1,13 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-// Nouveau format : objets enrichis avec prix/free/contexte
+// ============================================================
+// Types
+// ============================================================
+
 interface ModelEntry {
   id: string;
   name?: string;
   provider?: string;
   free?: boolean;
+  free_type?: string;
   pricing?: { prompt?: string; completion?: string };
   context_length?: number | null;
+}
+
+interface ModelStatus {
+  status: 'available' | 'unavailable' | 'unknown';
+  error: string | null;
+}
+
+interface ProviderMeta {
+  total: number;
+  free: number;
+  paid: number;
 }
 
 type ProviderList = ModelEntry[] | { error: string } | string[];
@@ -18,6 +33,21 @@ interface ModelsByProvider {
   openrouter?: ProviderList;
   nvidia?: ProviderList;
   ollama?: ProviderList;
+  gemini_meta?: ProviderMeta;
+  groq_meta?: ProviderMeta;
+  openrouter_meta?: ProviderMeta;
+  nvidia_meta?: ProviderMeta;
+  ollama_meta?: ProviderMeta;
+  cached?: boolean;
+  age_sec?: number;
+}
+
+interface StatusByProvider {
+  gemini?: Record<string, ModelStatus>;
+  groq?: Record<string, ModelStatus>;
+  openrouter?: Record<string, ModelStatus>;
+  nvidia?: Record<string, ModelStatus>;
+  ollama?: Record<string, ModelStatus>;
   cached?: boolean;
   age_sec?: number;
 }
@@ -27,42 +57,24 @@ interface Props {
   onChange: (model: string) => void;
 }
 
-// --- Helpers d'affichage ---
+// ============================================================
+// Helpers
+// ============================================================
 
 function normalizeEntry(m: ModelEntry | string): ModelEntry {
   if (typeof m === 'string') {
-    return { id: m, name: m, free: true };  // assume free par defaut pour strings
+    return { id: m, name: m, free: true };
   }
   return m;
 }
 
 function isFreeModel(m: ModelEntry): boolean {
-  // Un modele est gratuit si :
-  //   - free: true explicite
-  //   - pricing.prompt === "0" ET pricing.completion === "0"
-  //   - pricing.prompt === "credits" (NVIDIA)
   if (m.free === true) return true;
   const p = m.pricing?.prompt;
   const c = m.pricing?.completion;
-  if (p === "0" && c === "0") return true;
-  if (p === "credits" || c === "credits") return true;
+  if (p === '0' && c === '0') return true;
+  if (p === 'credits' || c === 'credits') return true;
   return false;
-}
-
-function findFirstFreeModel(models: ModelsByProvider): string | null {
-  // Auto-sélectionne le premier modèle gratuit disponible
-  // Ordre de préférence : gemini, groq, nvidia, openrouter, ollama
-  const preferredOrder = ['gemini', 'groq', 'nvidia', 'openrouter', 'ollama'];
-  for (const provider of preferredOrder) {
-    const list = models[provider as keyof ModelsByProvider];
-    if (!Array.isArray(list)) continue;
-    const entries = list.map(normalizeEntry);
-    const free = entries.filter(isFreeModel);
-    if (free.length > 0) {
-      return free[0].id;
-    }
-  }
-  return null;
 }
 
 function formatContext(ctx: number | null | undefined): string {
@@ -72,71 +84,88 @@ function formatContext(ctx: number | null | undefined): string {
   return `${ctx}`;
 }
 
-function formatPrice(pricing?: { prompt?: string; completion?: string }): string {
-  if (!pricing) return '';
-  const p = pricing.prompt;
-  const c = pricing.completion;
-  if (!p || !c) return '';
-  if (p === '0' && c === '0') return 'gratuit';
-  if (p === 'credits') return 'crédits';
-
-  const parse = (s: string) => {
-    const v = parseFloat(s);
-    return isNaN(v) ? null : v * 1_000_000;
-  };
-  const pin = parse(p);
-  const pout = parse(c);
-  if (pin === null || pout === null) return '';
-
-  // Si prix très bas (<0.01), afficher en millicents
-  const fmt = (v: number) => {
-    if (v === 0) return '0';
-    if (v < 0.01) return v.toFixed(4);
-    if (v < 1) return v.toFixed(3);
-    return v.toFixed(2);
-  };
-  return `$${fmt(pin)}/$${fmt(pout)}/M`;
+function statusIcon(st: ModelStatus | undefined): string {
+  if (!st) return '❓';
+  if (st.status === 'available') return '✅';
+  if (st.status === 'unavailable') return '⏸️';
+  return '❔';
 }
 
-// --- Composant ---
+function statusTooltip(st: ModelStatus | undefined): string {
+  if (!st) return 'Statut inconnu';
+  if (st.status === 'available') return 'Disponible';
+  if (st.status === 'unavailable') {
+    const reasons: Record<string, string> = {
+      rate_limit: 'Quota temporairement épuisé',
+      payment_required: 'Crédit requis',
+      model_not_found: 'Modèle introuvable',
+      non_chat_model: 'Modèle non-chat',
+      non_text_output: 'Sortie non-texte',
+      bad_request: 'Requête invalide',
+      timeout: 'Timeout',
+      empty_response: 'Réponse vide',
+    };
+    return reasons[st.error || ''] || `Indisponible (${st.error || 'inconnu'})`;
+  }
+  return `Statut inconnu (${st.error || '?'})`;
+}
+
+// ============================================================
+// Composant
+// ============================================================
 
 export function ModelSelector({ value, onChange }: Props) {
   const [models, setModels] = useState<ModelsByProvider>({});
+  const [statuses, setStatuses] = useState<StatusByProvider>({});
   const [loading, setLoading] = useState(false);
   const [freeOnly, setFreeOnly] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<number>(0);
 
-  const load = async (force = false) => {
+  const load = useCallback(async (force = false) => {
     setLoading(true);
     try {
-      const r = await fetch(`http://127.0.0.1:8001/api/models/all${force ? '?force_refresh=true' : ''}`);
-      const data = await r.json();
-      setModels(data);
+      const qs = force ? '?force_refresh=true' : '';
+      const [modelsRes, statusRes] = await Promise.all([
+        fetch(`http://127.0.0.1:8001/api/models/all${qs}`),
+        fetch(`http://127.0.0.1:8001/api/models/status${qs}`).catch(() => null),
+      ]);
+      const modelsData = await modelsRes.json();
+      setModels(modelsData);
 
-      // Auto-sélection du premier modèle gratuit si value est vide
-      // Corrige l'incohérence "auto" → modèles différents côté backend
+      if (statusRes && statusRes.ok) {
+        const statusData = await statusRes.json();
+        setStatuses(statusData);
+      }
+
+      // Auto-selection du premier modele gratuit si value est vide
       if (!value) {
-        const firstFree = findFirstFreeModel(data);
+        const firstFree = findFirstFreeModel(modelsData);
         if (firstFree) {
           onChange(firstFree);
         }
       }
+
+      setLastUpdate(Date.now());
     } catch (e) {
       console.error('ModelSelector load failed:', e);
     } finally {
       setLoading(false);
     }
-  };
+  }, [value, onChange]);
 
   useEffect(() => {
     load();
     const timer = setInterval(() => load(true), 3600_000);
     return () => clearInterval(timer);
-  }, []);
+  }, [load]);
+
+  const secondsAgo = lastUpdate
+    ? Math.round((Date.now() - lastUpdate) / 1000)
+    : 0;
 
   const renderProvider = (name: string, list: ProviderList | undefined) => {
     if (!list) return null;
 
-    // Erreur
     if (!Array.isArray(list)) {
       return (
         <optgroup key={name} label={`${name.toUpperCase()} (erreur)`}>
@@ -145,36 +174,42 @@ export function ModelSelector({ value, onChange }: Props) {
       );
     }
 
-    // Normaliser chaque entrée
     const entries = list.map(normalizeEntry);
-
-    // EXCLURE TOUJOURS les modèles payants
-    const freeEntries = entries.filter(isFreeModel);
-
-    // Si l'utilisateur a coché "free only", on garde seulement les 100% gratuits
-    // (mais on n'affiche déjà que ceux-là donc c'est identique)
-    const filtered = freeOnly ? freeEntries : entries;
+    const filtered = freeOnly ? entries.filter(isFreeModel) : entries;
 
     if (filtered.length === 0) return null;
 
-    const labelSuffix = `(${filtered.length})`;
+    const providerStatuses = (statuses as Record<string, Record<string, ModelStatus>>)[name] || {};
+    const available = filtered.filter(m => {
+      const st = providerStatuses[m.id];
+      return !st || st.status === 'available';
+    }).length;
+    const total = filtered.length;
+
+    const label = `${name.toUpperCase()} (${available}/${total} disponibles)`;
 
     return (
-      <optgroup key={name} label={`${name.toUpperCase()} ${labelSuffix}`}>
+      <optgroup key={name} label={label}>
         {filtered.map((m) => {
-          const icon = m.free ? '🆓' : (m.provider === 'ollama' ? '🏠' : m.provider === 'nvidia' ? '⚡' : '💎');
+          const st = providerStatuses[m.id];
+          const isUnavailable = st?.status === 'unavailable';
+          const icon = statusIcon(st);
+          const free = isFreeModel(m);
+          const freeIcon = free ? '🆓' : '💎';
           const ctx = formatContext(m.context_length);
-          const price = formatPrice(m.pricing);
 
-          const parts = [icon, m.id];
+          const parts = [icon, freeIcon, m.id];
           if (ctx) parts.push(`[${ctx}]`);
-          if (price && price !== 'gratuit') parts.push(`· ${price}`);
-
-          const label = parts.join(' ');
+          const optionLabel = parts.join(' ');
 
           return (
-            <option key={`${name}-${m.id}`} value={m.id} title={label}>
-              {label}
+            <option
+              key={`${name}-${m.id}`}
+              value={m.id}
+              title={statusTooltip(st)}
+              disabled={isUnavailable}
+            >
+              {optionLabel}
             </option>
           );
         })}
@@ -183,9 +218,19 @@ export function ModelSelector({ value, onChange }: Props) {
   };
 
   return (
-    <div className="model-selector" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+    <div
+      className="model-selector"
+      style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}
+    >
       <label
-        style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
+        style={{
+          fontSize: 12,
+          color: 'var(--text-muted)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          cursor: 'pointer',
+        }}
         title="Afficher uniquement les modèles gratuits"
       >
         <input
@@ -195,11 +240,12 @@ export function ModelSelector({ value, onChange }: Props) {
         />
         🆓
       </label>
+
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         style={{
-          minWidth: 360,
+          minWidth: 380,
           background: 'var(--bg-primary, #1a1a1a)',
           color: 'var(--text-primary, #fff)',
           border: '1px solid var(--border-subtle, #333)',
@@ -211,10 +257,18 @@ export function ModelSelector({ value, onChange }: Props) {
       >
         <option value="">— Sélectionner un modèle —</option>
         {Object.entries(models).map(([provider, list]) => {
-          if (provider === 'cached' || provider === 'age_sec' || provider === 'ts') return null;
+          if (
+            provider === 'cached' ||
+            provider === 'age_sec' ||
+            provider === 'ts' ||
+            provider.endsWith('_meta')
+          ) {
+            return null;
+          }
           return renderProvider(provider, list as ProviderList);
         })}
       </select>
+
       <button
         onClick={() => load(true)}
         disabled={loading}
@@ -230,6 +284,36 @@ export function ModelSelector({ value, onChange }: Props) {
       >
         {loading ? '⏳' : '🔄'}
       </button>
+
+      {lastUpdate > 0 && (
+        <span
+          style={{
+            fontSize: 10,
+            color: 'var(--text-muted)',
+            fontFamily: 'monospace',
+          }}
+        >
+          {secondsAgo}s
+        </span>
+      )}
     </div>
   );
+}
+
+// ============================================================
+// Helper : premier modele gratuit disponible
+// ============================================================
+
+function findFirstFreeModel(models: ModelsByProvider): string | null {
+  const preferredOrder = ['gemini', 'groq', 'nvidia', 'openrouter', 'ollama'];
+  for (const provider of preferredOrder) {
+    const list = models[provider as keyof ModelsByProvider];
+    if (!Array.isArray(list)) continue;
+    const entries = list.map(normalizeEntry);
+    const free = entries.filter(isFreeModel);
+    if (free.length > 0) {
+      return free[0].id;
+    }
+  }
+  return null;
 }
