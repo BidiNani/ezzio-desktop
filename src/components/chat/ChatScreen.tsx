@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import { ModelSelector } from '../ui/ModelSelector';
+import { ModelSelector } from './ModelSelector';
+import { ThinkingToggle } from './ThinkingToggle';
 import { MessageList } from './MessageList';
 import { ChatComposer } from './ChatComposer';
 import { ChatMessage } from '../../types';
@@ -19,6 +20,7 @@ export function ChatScreen({ _onSendMessage, initialMessages }: ChatScreenProps)
     },
   ]);
   const [loading, setLoading] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('');
   const sessionIdRef = useRef<string>(
     `desktop-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
   );
@@ -46,7 +48,7 @@ export function ChatScreen({ _onSendMessage, initialMessages }: ChatScreenProps)
           speed: 'auto',
           force_cloud: true,
           mission_profile: 'STANDARD',
-          model_target: 'auto',
+          model_target: selectedModel || 'auto',
           channel: 'desktop',
           session_id: sessionIdRef.current,
         }),
@@ -68,6 +70,8 @@ export function ChatScreen({ _onSendMessage, initialMessages }: ChatScreenProps)
         timestamp: new Date().toISOString(),
         model: data.model,
         provider: data.provider,
+        usage: data.usage,
+        thinking_level: data.thinking_level,
       };
       setMessages(prev => [...prev, assistantMsg]);
     } catch (err) {
@@ -112,7 +116,10 @@ export function ChatScreen({ _onSendMessage, initialMessages }: ChatScreenProps)
           </div>
         </div>
 
-        <ModelSelector />
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <ModelSelector value={selectedModel} onChange={setSelectedModel} />
+          <ThinkingToggle currentModel={selectedModel} />
+        </div>
       </div>
 
       {/* Liste des messages */}

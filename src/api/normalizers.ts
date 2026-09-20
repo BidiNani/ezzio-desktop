@@ -5,7 +5,7 @@
 import type { Mission, ApprovalRequest, SystemHealth, ProviderHealth, Risk } from '../types';
 import type { BackendMission, BackendApproval, BackendProviderHealth } from './types';
 
-function normalizeMission(raw: BackendMission): Mission {
+export function normalizeMission(raw: BackendMission): Mission {
   const id = raw.id ?? raw.mission_id ?? `mission-${Date.now()}`;
   const title = raw.title ?? raw.name ?? id;
   const description = raw.description ?? '';
@@ -62,7 +62,7 @@ function normalizeMission(raw: BackendMission): Mission {
 }
 
 
-function normalizeApproval(raw: BackendApproval): ApprovalRequest {
+export function normalizeApproval(raw: BackendApproval): ApprovalRequest {
   return {
     id: raw.approval_id,
     missionId: raw.task_id,
@@ -75,7 +75,7 @@ function normalizeApproval(raw: BackendApproval): ApprovalRequest {
 }
 
 
-function normalizeProvider(
+export function normalizeProvider(
   name: string,
   data: BackendProviderHealth,
   timestamp: number

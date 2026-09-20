@@ -1,11 +1,13 @@
 import { useState } from 'react';
 
+type KillResult = { ok: boolean; error?: string; [key: string]: unknown };
+
 const API = 'http://127.0.0.1:8001';
 
 export function KillSwitchScreen() {
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<unknown>(null);
+  const [result, setResult] = useState<KillResult | null>(null);
 
   const trigger = async () => {
     if (confirm !== 'ARRÊTER') return;

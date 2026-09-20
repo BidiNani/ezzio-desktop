@@ -100,6 +100,13 @@ export interface ChatMessage {
   model?: string;
   provider?: string;
   status?: 'sending' | 'success' | 'error';
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+    thoughts_tokens?: number;
+  };
+  thinking_level?: string | null;
 }
 
 export interface ResearchResult {

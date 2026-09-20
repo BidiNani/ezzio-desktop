@@ -34,6 +34,7 @@ export function useEzzioApi() {
 
   const [error, setError] = useState<string | null>(null);
   const pingTimer = useRef<number | null>(null);
+  const failureCount = useRef(0);
 
   const getBaseUrl = useCallback(
     () => buildBaseUrl(serverConfig),

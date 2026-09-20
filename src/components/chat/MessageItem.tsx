@@ -56,6 +56,32 @@ export function MessageItem({ message }: MessageItemProps) {
         >
           {message.content}
         </div>
+
+        {!isUser && message.usage && (
+          <div
+            style={{
+              marginTop: 6,
+              paddingLeft: 4,
+              fontSize: 11,
+              color: 'var(--text-muted)',
+              opacity: 0.7,
+              display: 'flex',
+              gap: 8,
+              alignItems: 'center',
+              flexWrap: 'wrap',
+            }}
+          >
+            <span>
+              🔤 {message.usage.prompt_tokens ?? 0} + {message.usage.completion_tokens ?? 0} = {message.usage.total_tokens ?? 0} tokens
+            </span>
+            {(message.usage.thoughts_tokens ?? 0) > 0 && (
+              <span>🧠 {message.usage.thoughts_tokens} thoughts</span>
+            )}
+            {message.thinking_level && message.thinking_level !== 'off' && (
+              <span>⚡ {message.thinking_level}</span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

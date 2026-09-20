@@ -69,3 +69,10 @@ test-results/
 playwright-report/
 blob-report/
 .playwright/
+
+# Tauri dev logs
+tauri_dev_*.log
+tauri_dev_*.log.err
+
+# TypeScript diagnostics
+tsc_diagnostic.txt
