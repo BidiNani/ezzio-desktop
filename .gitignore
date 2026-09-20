@@ -83,3 +83,6 @@ tsc_diagnostic.txt
 *.key
 *.key.pub
 
+
+# Scripts Python temporaires
+_fix_*.py
