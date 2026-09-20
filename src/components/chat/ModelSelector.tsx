@@ -153,7 +153,7 @@ export function ModelSelector({ value, onChange }: Props) {
 
     // Si l'utilisateur a coché "free only", on garde seulement les 100% gratuits
     // (mais on n'affiche déjà que ceux-là donc c'est identique)
-    const filtered = freeOnly ? freeEntries : freeEntries;
+    const filtered = freeOnly ? freeEntries : entries;
 
     if (filtered.length === 0) return null;
 
