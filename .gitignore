@@ -76,3 +76,9 @@ tauri_dev_*.log.err
 
 # TypeScript diagnostics
 tsc_diagnostic.txt
+
+# Tauri signer keys
+.tauri/
+*.key
+*.key.pub
+
