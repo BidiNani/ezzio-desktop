@@ -114,6 +114,17 @@ function statusTooltip(st: ModelStatus | undefined): string {
 // Composant
 // ============================================================
 
+const DEPRECATED_PATTERNS: RegExp[] = [
+  /^gemini-2\.0-/,
+  /^gemini-2\.5-flash(-|$)/,   // gemini-2.5-flash et variantes, pas gemini-2.5-pro
+  /-deprecated$/,
+  /-legacy$/,
+];
+
+function isDeprecated(modelId: string): boolean {
+  return DEPRECATED_PATTERNS.some((p) => p.test(modelId));
+}
+
 function deriveProvider(modelId: string): string {
   if (!modelId) return 'auto';
   if (modelId.startsWith('groq/'))     return 'groq';
@@ -190,7 +201,9 @@ export function ModelSelector({ value, onChange }: Props) {
     }
 
     const entries = list.map(normalizeEntry);
-    const filtered = freeOnly ? entries.filter(isFreeModel) : entries;
+    const filtered = (freeOnly ? entries.filter(isFreeModel) : entries).filter(
+      (m) => !isDeprecated(m.id),
+    );
 
     if (filtered.length === 0) return null;
 
@@ -325,7 +338,7 @@ function findFirstFreeModel(models: ModelsByProvider): string | null {
     const list = models[provider as keyof ModelsByProvider];
     if (!Array.isArray(list)) continue;
     const entries = list.map(normalizeEntry);
-    const free = entries.filter(isFreeModel);
+    const free = entries.filter(isFreeModel).filter((m) => !isDeprecated(m.id));
     if (free.length > 0) {
       return free[0].id;
     }
