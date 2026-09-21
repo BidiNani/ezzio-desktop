@@ -8,9 +8,10 @@ import { ChatMessage } from '../../types';
 interface ChatScreenProps {
   _onSendMessage?: (message: string) => Promise<void>;
   initialMessages?: ChatMessage[];
+  onModelChange?: (model: string, provider: string) => void;
 }
 
-export function ChatScreen({ _onSendMessage, initialMessages }: ChatScreenProps) {
+export function ChatScreen({ _onSendMessage, initialMessages, onModelChange }: ChatScreenProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages || [
     {
       id: 'welcome',
@@ -117,7 +118,13 @@ export function ChatScreen({ _onSendMessage, initialMessages }: ChatScreenProps)
         </div>
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <ModelSelector value={selectedModel} onChange={setSelectedModel} />
+          <ModelSelector
+            value={selectedModel}
+            onChange={(m: string, provider: string) => {
+              setSelectedModel(m);
+              onModelChange?.(m, provider);
+            }}
+          />
           <ThinkingToggle currentModel={selectedModel} />
         </div>
       </div>

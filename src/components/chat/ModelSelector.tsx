@@ -54,7 +54,7 @@ interface StatusByProvider {
 
 interface Props {
   value: string;
-  onChange: (model: string) => void;
+  onChange: (model: string, provider: string) => void;
 }
 
 // ============================================================
@@ -114,6 +114,21 @@ function statusTooltip(st: ModelStatus | undefined): string {
 // Composant
 // ============================================================
 
+function deriveProvider(modelId: string): string {
+  if (!modelId) return 'auto';
+  if (modelId.startsWith('groq/'))     return 'groq';
+  if (modelId.startsWith('gemini'))    return 'gemini';
+  if (modelId.startsWith('claude'))    return 'anthropic';
+  if (modelId.startsWith('gpt'))       return 'openai';
+  if (modelId.startsWith('mistral'))   return 'mistral';
+  if (modelId.startsWith('qwen'))      return 'qwen';
+  if (modelId.startsWith('deepseek'))  return 'deepseek';
+  if (modelId.startsWith('ollama/'))   return 'ollama';
+  // fallback : tout ce qui contient un slash = "provider/model"
+  if (modelId.includes('/'))           return modelId.split('/')[0];
+  return 'auto';
+}
+
 export function ModelSelector({ value, onChange }: Props) {
   const [models, setModels] = useState<ModelsByProvider>({});
   const [statuses, setStatuses] = useState<StatusByProvider>({});
@@ -141,7 +156,7 @@ export function ModelSelector({ value, onChange }: Props) {
       if (!value) {
         const firstFree = findFirstFreeModel(modelsData);
         if (firstFree) {
-          onChange(firstFree);
+          onChange(firstFree, deriveProvider(firstFree));
         }
       }
 
@@ -243,7 +258,7 @@ export function ModelSelector({ value, onChange }: Props) {
 
       <select
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value, deriveProvider(e.target.value))}
         style={{
           minWidth: 380,
           background: 'var(--bg-primary, #1a1a1a)',

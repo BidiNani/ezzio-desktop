@@ -43,10 +43,10 @@ function useMediaQuery(query: string): boolean {
 type ScreenComponent = () => React.ReactElement;
 
 // Tous les écrans SAUF "settings", qui a un rendu dédié (props spécifiques).
-type StandardTab = Exclude<TabId, 'settings'>;
+type StandardTab = Exclude<TabId, 'settings' | 'chat'>;
 
 const SCREEN_MAP: Record<StandardTab, ScreenComponent> = {
-  chat:        () => <ChatScreen />,
+  // chat gere separement dans renderScreen (necessite onModelChange)
   missions:    () => <MissionsScreen />,
   approvals:   () => <ApprovalsScreen />,
   goals:       () => <ObjectivesScreen />,
@@ -73,6 +73,8 @@ export default function App() {
   });
   const [showContextPanel, setShowContextPanel] = useState(false);
   const [showKillSwitch, setShowKillSwitch] = useState(false);
+  const [activeModel, setActiveModel] = useState('auto');
+  const [activeProvider, setActiveProvider] = useState('auto');
 
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [pendingApprovals, setPendingApprovals] = useState(0);
@@ -105,12 +107,20 @@ export default function App() {
     setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
   }, []);
 
+  const handleModelChange = useCallback((model: string, provider: string) => {
+    setActiveModel(model || 'auto');
+    setActiveProvider(provider || 'auto');
+  }, []);
+
   // Rendu de l'écran actif
   const renderScreen = (): React.ReactElement => {
     if (activeTab === 'settings') {
       return (
         <SettingsScreen />
       );
+    }
+    if (activeTab === 'chat') {
+      return <ChatScreen onModelChange={handleModelChange} />;
     }
     const Screen = SCREEN_MAP[activeTab as StandardTab];
     return Screen();
@@ -123,8 +133,8 @@ export default function App() {
         onNavigate={setActiveTab}
         pendingApprovals={pendingApprovals}
         serverConfig={api.serverConfig}
-        activeModel="auto"
-        activeProvider="auto"
+        activeModel={activeModel}
+        activeProvider={activeProvider}
         health={health}
         theme={theme}
         onToggleTheme={handleToggleTheme}
